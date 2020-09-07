@@ -73,7 +73,7 @@ def DecomposeLDU(A):
         L[i, j], A[i, j] = A[i, j], 0.0
 
   # Decompose DU
-  U = inv(D) * A
+  U = inv(D).dot(A)
   return L, D, U, P
 
 def Solve(A, b):
@@ -93,8 +93,7 @@ def Solve(A, b):
   """
   # Decompose matrix A
   n = A.shape[0]
-  A_ = A.copy()
-  L, D, U, P = DecomposeLDU(A_)
+  L, D, U, P = DecomposeLDU(A)
   
   x = np.zeros(n)
   y = np.zeros(n)
