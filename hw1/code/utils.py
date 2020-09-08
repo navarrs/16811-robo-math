@@ -10,8 +10,8 @@ import numpy as np
 
 #
 # Funcition Implementation -----------------------------------------------------
-def ReadMatrix(filename, type_mat):
-  return np.loadtxt(filename, dtype=type_mat, delimiter=',')
+def ReadMatrix(filename, type_mat=float, delim=","):
+  return np.loadtxt(filename, dtype=type_mat, delimiter=delim)
 
 #
 # End --------------------------------------------------------------------------
