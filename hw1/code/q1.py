@@ -28,7 +28,8 @@ def DecomposeLDU(A, do_assert=False):
       U: Upper triangular matrix (mxn, n=m)
       P: Permutation matrix (mxm)
   """
-  assert A.shape[0] == A.shape[1], "Input matrix is invalid"
+  assert A.shape[0] == A.shape[1] and A.shape[0] == np.linalg.matrix_rank(A), \
+    "Input matrix is invalid"
 
   if do_assert:
     # Create a copy of A to test the resulting matrices
@@ -45,22 +46,18 @@ def DecomposeLDU(A, do_assert=False):
 
     # Identify if a permutation is required based on the index of the max element 
     # in the ith column
-    si = [A[j, i] for j in range(i, n)]
+    si = [abs(A[j, i]) for j in range(i, n)]
     max_i = si.index(max(si)) + i
   
     # Permute if max_i is not equal to current row
     if max_i != i:
       A[[max_i, i]] = A[[i, max_i]]
       P[[max_i, i]] = P[[i, max_i]]
-
-      # if i > 0:
-      #   L[[max_i, i-1]], L[[i, i-1]] = L[[i,i-1]], L[[max_i, i-1]]
     
     # Gaussian reduction on A
     for j in range(i+1, n):
       # pivot
       A[j, i] /= A[i, i]
-      # L[j, i] = A[j, i]
       # Update jth A row as: 
       #    rowj = rowj - pivot * rowi
       for k in range(i+1, n):
@@ -68,13 +65,10 @@ def DecomposeLDU(A, do_assert=False):
 
   # 2. Decompose L, D, U
   for i in range(n):
-    for j in range(n):
-      if i == j:
-        D[i, i] = A[i, j]
-      elif i > j:
-        #A[i, j] = 0.0
-        L[i, j], A[i, j] = A[i, j], 0.0
-  U = inv(D).dot(A)
+    for j in range(i):
+      L[i, j], A[i, j] = A[i, j], 0.0
+  D = np.diag(np.diag(A))
+  U = A / np.diag(D)[:, None]
 
   # 3. If specified check result
   if do_assert:
