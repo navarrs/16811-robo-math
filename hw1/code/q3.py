@@ -13,7 +13,9 @@ import utils
 import q2
 import numpy as np
 import scipy
+import fractions
 
+# np.set_printoptions(formatter={'all':lambda x: str(fractions.Fraction(x).limit_denominator())})
 np.set_printoptions(precision=3, suppress=True)
 
 class SolutionType(Enum):
@@ -28,11 +30,6 @@ def GetAb(filename):
   b, A = A[-1, :], A[:-1, :]
   return A, b
 
-def GetNullSpace(A):
-  """
-    Calculates the nullspace
-  """
-
 def Solve(A, b):
   """
     Solves the Ax = b via SVD
@@ -43,12 +40,12 @@ def Solve(A, b):
     Output
     ------
       x: The solution to the system of linear equations. 
-      ns: Null space of A
       sol_type: If the system has UNIQUE, ZERO or MANY solutions
   """
+  sol_type = SolutionType.UNIQUE_SOL
   n = A.shape[0] # rows
   m = A.shape[1] # cols
-  print(f"\n---------------\nA^{n}x{m}:\n{A}\nb:\n{b}\n")
+  print(f"\nA^{n}x{m}:\n{A}\nb:\n{b}\n")
 
   U, S, V_T = q2.ComputeSVD(A) 
   k = np.linalg.matrix_rank(S)
@@ -62,31 +59,44 @@ def Solve(A, b):
   V = np.transpose(V_T)
 
   # x = V 1/S U_T b
-  x  = np.matmul(V, np.matmul(S_inv, np.dot(U_T, b)))
+  x  = np.matmul(V, np.matmul(S, np.dot(U_T, b)))
+  ns = []
 
   # If b in colspace(A), then Ax = b with x = V 1/S U_T b
   # Check if the type of solution to the system
-  b_ = np.matmul(A, x)
   if k < n:
-    ns = V[:, :n-k]
+    b_ = np.matmul(A, x)
+    ns = V_T[-(n-k):, :]
     if np.allclose(b, b_):
       # b is in colspace(A) but there are many solutions
-      return x, ns, SolutionType.MANY_SOL
+      sol_type = SolutionType.MANY_SOL
     else:
       # b is not in colspace(A)
-      return np.nan, ns, SolutionType.ZERO_SOL
+      sol_type = SolutionType.ZERO_SOL
 
-  print(f"\nb_{b_}\n")
-  return x, V[:, :n-k], SolutionType.UNIQUE_SOL
+  return x, ns, sol_type
 
 #
 # Main program -----------------------------------------------------------------
 if __name__ == "__main__":
   files = glob.glob(sys.argv[1] + "/*.txt")
   for f in files:
+    print("-----------------------------------")
     # Read matrix
     A, b = GetAb(f)
     # Solve 
     x, ns, sol_type = Solve(A, b)
     b_ = A.dot(x) # Should be the same as b
-    print(f"\n* Result with {sol_type}:\nx: {x}\nnull space: {ns}\n")
+
+    # Verify the solutions 
+    print(f"\n* Result with {sol_type}:\nx: {x}\nns:{ns}\n")
+    if sol_type == SolutionType.UNIQUE_SOL:
+      Ax = A.dot(x)
+      print(f"Ax == b ? {np.allclose(Ax, b)}\nAx:{Ax} b:{b}")
+    elif sol_type == SolutionType.MANY_SOL:
+      for xn in ns:
+        # generate a real number to make a linear combination with xn
+        a = np.random.randint(100)
+        # Test for A(x+ a*xn) = b
+        Ax = A.dot(x + a * xn)
+        print(f"A(x + xn) == b ? {np.allclose(Ax, b)} \nx:{x} a*xn:{a * xn} Ax:{Ax} b{b}")
