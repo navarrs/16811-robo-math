@@ -36,7 +36,7 @@ class TestLDU():
     A_ = A.copy()
     b = np.matrix(np.random.uniform(low=self.low, high=self.high, size=(n, 1)))
     b_ = b.copy()
-    x = q1.Solve(A, b, False)
+    x = q1.Solve(A, b, True)
     assert np.allclose(A_.dot(x), np.transpose(b_)), "Ax != b"
     
 if __name__ == '__main__':

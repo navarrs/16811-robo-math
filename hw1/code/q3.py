@@ -100,3 +100,4 @@ if __name__ == "__main__":
         # Test for A(x+ a*xn) = b
         Ax = A.dot(x + a * xn)
         print(f"A(x + xn) == b ? {np.allclose(Ax, b)} \nx:{x} a*xn:{a * xn} Ax:{Ax} b{b}")
+      

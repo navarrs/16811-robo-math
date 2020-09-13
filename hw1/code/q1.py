@@ -128,7 +128,14 @@ def solve_random(size, min_val, max_val, do_assert):
   b = np.matrix(np.random.uniform(low=min_val, high=max_val, size=(size, 1)))
   print(f"A:\n{A}\nb:\n{b}\n")
 
+  if do_assert:
+    A_ = A.copy()
+    b_ = b.copy()
+
   x = Solve(A, b, do_assert)
+  if do_assert:
+    # Verify that Ax leads to b
+    assert np.allclose(A_.dot(x), np.transpose(b_)), "Ax != b"
   print(f"x:{x}\n")
 
 def solve_from_file(path, do_assert):
@@ -140,8 +147,15 @@ def solve_from_file(path, do_assert):
   assert A.shape[0] == A.shape[1] and A.shape[0] == b.shape[0], \
     "Dimensions of A and b are nxn and nx1, but are A:{}x{} b:{}x1".format(
       A.shape[0],A.shape[1],b.shape[0])
+  
+  if do_assert:
+    A_ = A.copy()
 
   x = Solve(A, b, do_assert)
+  if do_assert:
+    # Verify that Ax leads to b
+    assert np.allclose(A_.dot(x), b), "Ax != b"
+
   print(f"x:{x}\n")
 
 if __name__ == "__main__":
