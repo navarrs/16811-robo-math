@@ -123,7 +123,7 @@ def Solve(A, b, do_assert):
 
 #
 # Main program -----------------------------------------------------------------
-def solve_random(size, min_val, max_val, do_assert):
+def SolveRandom(size, min_val, max_val, do_assert):
   A = np.matrix(np.random.uniform(low=min_val, high=max_val, size=(size, size)))
   b = np.matrix(np.random.uniform(low=min_val, high=max_val, size=(size, 1)))
   print(f"A:\n{A}\nb:\n{b}\n")
@@ -138,7 +138,7 @@ def solve_random(size, min_val, max_val, do_assert):
     assert np.allclose(A_.dot(x), np.transpose(b_)), "Ax != b"
   print(f"x:{x}\n")
 
-def solve_from_file(path, do_assert):
+def SolveFromFile(path, do_assert):
   # Assume last row in matrix is vector b
   A = utils.ReadMatrix(path)
   b, A = A[-1, :], A[:-1, :]
@@ -180,6 +180,6 @@ if __name__ == "__main__":
   args = parser.parse_args()
 
   if args.from_file:
-    solve_from_file(args.path, args.do_assert)
+    SolveFromFile(args.path, args.do_assert)
   else:
-    solve_random(args.size, args.min, args.max, args.do_assert)
+    SolveRandom(args.size, args.min, args.max, args.do_assert)

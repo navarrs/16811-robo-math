@@ -8,6 +8,16 @@ import argparse
 import numpy as np
 import q1
 
+def TestSpecific():
+  A = np.matrix([[0, 3], [2, 0]])
+  A_ = A.copy()
+  L, D, U, P = q1.DecomposeLDU(A)
+  print(f"P\n{P}\nA\n{A_}\nL\n{L}\n{D}\nU{U}\n")
+  PA = P.dot(A_)
+  LDU = (L.dot(D)).dot(U)
+  print(f"PA\n{PA}\nLDU\n{LDU}\n")
+  assert np.allclose(PA, LDU), "PA != LDU"
+
 class TestLDU():
   def __init__(self, n_min=2, n_max=100, low=-10000.0, high=10000.0):
     # Max matrix size
@@ -50,4 +60,6 @@ if __name__ == '__main__':
     print("Test {}".format(t))
     test.TestDecompositionLDU()
     test.TestSolve()
+  
+  TestSpecific()
   print("All tests passed")
