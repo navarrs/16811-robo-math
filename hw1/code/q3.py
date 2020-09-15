@@ -32,14 +32,15 @@ def GetAb(filename):
 
 def Solve(A, b):
   """
-    Solves the Ax = b via SVD
+    Computes the least squares approach to find x based on SVD
     Input
     -----
       A: mxn matrix
       b: 1xn vector
     Output
     ------
-      x: The solution to the system of linear equations. 
+      x: The solution to the system of linear equations.
+      ns: Vector(s) that span the null-space 
       sol_type: If the system has UNIQUE, ZERO or MANY solutions
   """
   sol_type = SolutionType.UNIQUE_SOL
@@ -56,10 +57,11 @@ def Solve(A, b):
   S_inv = S
   for i in range(k):
     S_inv[i, i] = 1 / S_inv[i, i]
+  S_inv = S_inv.transpose()
   V = np.transpose(V_T)
 
   # x = V 1/S U_T b
-  x  = np.matmul(V, np.matmul(S, np.dot(U_T, b)))
+  x  = np.dot(np.matmul(np.matmul(V, S_inv), U_T), b)
   ns = []
 
   # If b in colspace(A), then Ax = b with x = V 1/S U_T b
