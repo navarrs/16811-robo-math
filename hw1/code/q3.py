@@ -6,13 +6,11 @@
 
 #
 # Includes ---------------------------------------------------------------------
-import sys
-import glob
 from enum import Enum
-from utils import ReadMatrix
 import q2
 import numpy as np
 import scipy
+#from utils import ReadMatrix
 
 np.set_printoptions(precision=3, suppress=True)
 
@@ -23,9 +21,18 @@ class SolutionType(Enum):
   ZERO_SOL = 2
   MANY_SOL = 3
 
-def GetAb(filename):
-  A = ReadMatrix(f)
-  b, A = A[-1, :], A[:-1, :]
+def GetExamples():
+  A1 = np.array([[1, 1, 1], [10, 2, 9], [8, 0, 7]], dtype=float)
+  b1 = np.array([1, 3, 1],  dtype=float)
+
+  A2 = np.array([[1, 1, 1], [10, 2, 9], [8, 0, 7]], dtype=float)
+  b2 = np.array([3, 2, 2],  dtype=float)
+
+  A3 = np.array([[10, -10, 0], [0, -4, 2], [2, 0, -5]], dtype=float)
+  b3 = np.array([10, 2, 13],  dtype=float)
+
+  A = [A1, A2, A3]
+  b = [b1, b2, b3]
   return A, b
 
 #
@@ -81,11 +88,13 @@ def Solve(A, b):
 #
 # Main program -----------------------------------------------------------------
 if __name__ == "__main__":
-  files = glob.glob(sys.argv[1] + "/*.txt")
-  for f in files:
-    print("-----------------------------------")
+
+  A_list, b_list = GetExamples()
+
+  for i in range(len(A_list)):
+    print("\n\n-----------------------------------")
     # Read matrix
-    A, b = GetAb(f)
+    A, b = A_list[i], b_list[i]
     # Solve 
     x, ns, sol_type = Solve(A, b)
     b_ = A.dot(x) # Should be the same as b

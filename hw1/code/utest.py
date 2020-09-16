@@ -7,6 +7,7 @@
 import argparse
 import numpy as np
 import q1
+import q5
 
 def TestSpecific():
   A = np.matrix([[0, 3], [2, 0]])
@@ -48,18 +49,62 @@ class TestLDU():
     b_ = b.copy()
     x = q1.Solve(A, b, True)
     assert np.allclose(A_.dot(x), np.transpose(b_)), "Ax != b"
+  
+class TestRigidMotion():
+  def __init__(self, N_min=3, N_max=1000, deg_min=-180, deg_max= 180, d_min=-100, d_max=100):
+    # Point set size
+    self.N_min = N_min
+    self.N_max = N_max
+    # Angle values
+    self.deg_min = deg_min
+    self.deg_max = deg_max
+    # Displacement values
+    self.d_min = d_min
+    self.d_max = d_max
+  
+  def TestRM(self):
+    n = np.random.randint(low=self.N_min, high=self.N_max)
+    yaw = np.random.randint(low=self.deg_min, high=self.deg_max)
+    pitch = np.random.randint(low=self.deg_min, high=self.deg_max)
+    roll = np.random.randint(low=self.deg_min, high=self.deg_max)
+    dx = np.random.randint(low=self.d_min, high=self.d_max)
+    dy = np.random.randint(low=self.d_min, high=self.d_max)
+    dz = np.random.randint(low=self.d_min, high=self.d_max)
+    
+    # Test
+    R_truth = q5.Euler2RotationMatrix(yaw, pitch, roll)
+    t_truth = np.array([dx, dy, dz]).reshape(3, 1)
+    P, Q_truth = q5.ComputePointSet(R_truth, t_truth, n)
+    R_est, t_est, _ = q5.ComputeRigidTransformation(P, Q_truth)
+
+    assert np.allclose(R_truth, R_est), "R_truth != R_est"
+    assert np.allclose(t_truth, t_est), "t_truth != t_est"
     
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
   parser.add_argument("--n_tests", help="tests to execute", type=int, default=10)
+  parser.add_argument("--ldu", help="Tests LDU", action="store_true", default=False)
+  parser.add_argument("--rigid", help="Tests Rigid Motion", action="store_true", default=False)
   args = parser.parse_args()
 
-  test = TestLDU()
-
-  for t in range(args.n_tests):
-    print("Test {}".format(t))
-    test.TestDecompositionLDU()
-    test.TestSolve()
+  # Test LDU
+  if args.ldu:
+    print("Testing LDU")
+    test = TestLDU()
+    for t in range(args.n_tests):
+      print("Test {}".format(t))
+      test.TestDecompositionLDU()
+      print("\t--LDU success")
+      test.TestSolve()
+      print("\t--Solve success")
+    TestSpecific()
   
-  TestSpecific()
+  if args.rigid:
+    print("Testing Rigid Motion")
+    test = TestRigidMotion()
+    for t in range(args.n_tests):
+      print("Test {}".format(t))
+      test.TestRM()
+      print("\t--RM success")
+
   print("All tests passed")

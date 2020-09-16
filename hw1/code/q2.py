@@ -6,12 +6,10 @@
 
 #
 # Includes ---------------------------------------------------------------------
-import glob
 import numpy as np
 import q1
 from scipy import linalg 
-import sys
-from utils import ReadMatrix
+#from utils import ReadMatrix#, LatexArr
 
 np.set_printoptions(precision=3, suppress=True)
 
@@ -34,6 +32,15 @@ def ComputeSVD(A):
   U, s, V_T = linalg.svd(A)
   S = linalg.diagsvd(s, m, n)
   return U, S, V_T
+
+def GetExamples():
+  A1 = np.array([[10, -10, 0], [0, -4, 2], [2, 0, -5]], 
+    dtype=float)
+  A2 = np.array([[5, -5, 0, 0], [5, 5, 5, 0], [0, -1, 4, 1],
+                 [0, 4, -1, 2], [0, 0, 2, 1]],  dtype=float)
+  A3 = np.array([[1, 1, 1], [10, 2, 9], [8, 0, 7]],  dtype=float)
+  A = [A1, A2, A3]
+  return A
 
 def ComputeLDU(A):
   """
@@ -73,23 +80,28 @@ def ComputeLDU(A):
 #
 # Main program -----------------------------------------------------------------
 if __name__ == "__main__":
-  files = glob.glob(sys.argv[1] + "/*.txt")
+  A_ = GetExamples()
   
-  for f in files:
+  for i in range(len(A_)):
     # Read matrix
-    A = ReadMatrix(f)
-    
+    # A = ReadMatrix(f)
+    A = A_[i]
+
     # Matrix dim
     n = A.shape[0] # rows
     m = A.shape[1] # cols
     k = np.linalg.matrix_rank(A)
-    print(f"---------------\nA^{m}x{n} with rank: {k}:\n{A}:")
+    print(f"\n\n---------------\nA^{m}x{n} with rank: {k}:\n{A}:")
+
+    # SVD decomposition
+    print(f"\n* SVD Decomposition")
+    U, S, V_T = ComputeSVD(A) 
+    print(f"U:\n{U}\nS:\n{S}\nV_T:\n{V_T}")
+    #print(f"U:\n{LatexArr(U)}\nS:\n{LatexArr(S)}\nV_T:\n{LatexArr(V_T)}")
 
     # LDU decomposition 
     # Using code from q1.py if matrix is square and non-singular
+    print(f"\n* LDU Decomposition")
     L, D, U, P = ComputeLDU(A)     
-    print(f"\n* LDU Decomposition\nL:\n{L}\nD:\n{D}\nU:\n{U}\nP:\n{P}")
-
-    # SVD decomposition
-    U, S, V_T = ComputeSVD(A) 
-    print(f"\n* SVD Decomposition\nU:\n{U}\nS:\n{S}\nV_T:\n{V_T}")
+    print(f"L:\n{L}\nD:\n{D}\nU:\n{U}\nP:\n{P}")
+    #print(f"L:\n{LatexArr(L)}\nD:\n{LatexArr(D)}\nU:\n{LatexArr(U)}\nP:\n{LatexArr(P)}")

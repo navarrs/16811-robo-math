@@ -131,46 +131,47 @@ def Solve(A, b, do_assert):
     Ax = A_.dot(x)
     assert np.allclose(Ax, np.transpose(b_)), "Ax != b"
     print("Success: Ax == b")
-    print(f"\nAx:\n{Ax}\nb:\n{b_}\n")
+    print(f"\nAx:\n{Ax}\nb:\n{np.transpose(b_)}\n")
   return x
 
 #
 # Helper methods ---------------------------------------------------------------
-def SolveRandom(n, min_val, max_val, do_assert):
+def SolveRandom(do_assert=False, min_n=2, max_n=10, min_val=-100, max_val=100):
   """
     Creates a random matrix A(nxn) and vector b(nx1). Then, solves Ax = b for x
     using LDU. 
     Inputs
     ------
-      n: Size of matrix A(nxn) and vector b(nx1)
-      min_val: Minimum allowed value to create the matrix
-      max_val: Maximum allowed value to create the matrix
       do_assert: If enabled, verifies that Ax == b
+      min_n: Min size of square matrix A and vector b
+      max_n: Max size of square matrix A and vector b
+      min_val: Min allowed value to create the matrix
+      max_val: Max allowed value to create the matrix
     Outputs
     -------
       Nothing
   """
+  n = np.random.randint(low=min_n, high=max_n)
   A = np.matrix(np.random.uniform(low=min_val, high=max_val, size=(n, n)))
   b = np.matrix(np.random.uniform(low=min_val, high=max_val, size=(n, 1)))
   print(f"A:\n{A}\nb:\n{b}\n")
   x = Solve(A, b, do_assert)
   print(f"x:{x}\n")
 
-def SolveFromFile(path, do_assert):
+def SolveExample(A, b, do_assert):
   """
     Loads a system of linear equations from a path and solves Ax = b for x using 
     LDU decomposition.  
     Inputs
     ------
-      path: Path to the filename containing A, b
       do_assert: If enabled, verifies that Ax == b
     Outputs
     -------
       Nothing
   """
   # Assume last row in matrix is vector b
-  A = ReadMatrix(path)
-  b, A = A[-1, :], A[:-1, :]
+  # A = ReadMatrix(path)
+  # b, A = A[-1, :], A[:-1, :]
   print(f"A:\n{A}\nb:\n{b}\n")
 
   assert A.shape[0] == A.shape[1] and A.shape[0] == b.shape[0], \
@@ -180,32 +181,41 @@ def SolveFromFile(path, do_assert):
   x = Solve(A, b, do_assert)
   print(f"x:{x}\n")
 
+def GetExamples():
+  A1 = np.array([[1, -2, 1], [1, 2, 2], [2, 3, 4]], dtype=float)
+  b1 = np.array([5, 9, 2],  dtype=float)
+
+  A2 = np.array([[2, 3, 3], [1, -2, 1], [3, -1, -2]],  dtype=float)
+  b2 = np.array([5, -4, 3], dtype=float)
+
+  A3 = np.array([[1,2,1,4], [2,0,4,3], [4,2,2,1], [-3,1,3,2]],  dtype=float)
+  b3 = np.array([13,28,20,6], dtype=float)
+
+  A4 = np.array([[2,-1,4,1,-1], [-1,3,-2,-1,2], [5,1,3,-4,1], 
+                 [3,-2,-2,-2,3], [-4,-1,-5,3,-4]],  dtype=float)
+  b4 = np.array([7,1,33,24,-49], dtype=float)
+
+  A = [A1, A2, A3, A4]
+  b = [b1, b2, b3, b4]
+  return A, b
+
 #
 # Main program -----------------------------------------------------------------
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()
-  
   # Use it to verify PA == LDU and Ax == b
-  parser.add_argument("--do_assert", 
-    help="Asserts that PA == LDU", action="store_true", default=False)
-
-  # If --from_file and --path are specified, the other configuration parameters 
-  # are ignored
-  parser.add_argument("--from_file", 
-    help="Reading the input from a file", action="store_true", default=False)
-  parser.add_argument("--path", 
-    help="File containing matrix A and vector b", default="Ab.txt")
-
-  # These parameters are used to create a random system of equations. 
-  parser.add_argument("--size", 
-    help="matrix size", type=int, default=3)
-  parser.add_argument("--min", 
-    help="min value in matrix", type=float, default=-100.0)
-  parser.add_argument("--max", 
-    help="max value in matrix", type=float, default=100.0)
+  parser.add_argument("--do_assert", help="Asserts that PA == LDU and Ax == b", 
+    action="store_true", default=False)
+  # If testing a sample from file, add --from-file --path /path/to/file
+  parser.add_argument("--random", help="Reading the input from a file", 
+    action="store_true", default=False)
   args = parser.parse_args()
 
-  if args.from_file:
-    SolveFromFile(args.path, args.do_assert)
+  if args.random:
+    SolveRandom(args.do_assert)
   else:
-    SolveRandom(args.size, args.min, args.max, args.do_assert)
+    A, b = GetExamples()
+    for i in range(len(A)):
+      A_ = A[i]
+      b_ = b[i]
+      SolveExample(A_, b_, args.do_assert)
