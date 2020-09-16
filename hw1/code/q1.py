@@ -14,7 +14,7 @@ from numpy.linalg import matrix_rank, inv
 from utils import ReadMatrix
 
 #
-# Implementation methods -------------------------------------------------------
+# Problem implementation -------------------------------------------------------
 def DecomposeLDU(A, do_assert=False):
   """
     Performs LDU decomposition via Gaussian reduction. This code is designed for 

@@ -2,22 +2,21 @@
 # @andrewid   ingridn
 # @date       Sept 4, 2020
 #
-# @brief      Computing LDU and SVD decomposition 
+# @brief      Computing LDU and SVD decomposition for a given set of matrices
 
 #
 # Includes ---------------------------------------------------------------------
-import sys
 import glob
-
-import utils
-import q1
 import numpy as np
+import q1
 from scipy import linalg 
+import sys
+from utils import ReadMatrix
 
 np.set_printoptions(precision=3, suppress=True)
 
 #
-# Functions --------------------------------------------------------------------
+# Problem implementation -------------------------------------------------------
 def ComputeSVD(A):
   """
     Computes singular value decomposition
@@ -38,15 +37,17 @@ def ComputeSVD(A):
 
 def ComputeLDU(A):
   """
-    Performs LDU decomposition via Gaussian reduction.
+    Performs LDU decomposition via Gaussian reduction. Uses two methods: 
+      (1) DecomposeLDU() - from q1. Used for square, non-singular matrices. 
+      (2) linalg.lu - from Scipy. Used for the remaining cases. 
     Input
     ------
-      A: Square (mxn, n=m), non-singular matrix that will be decomposed
+      A: Matrix (mxn)
     Output
     ------
       L: Low triangular matrix (mxm)
       D: Diagonal matrix (mxm)
-      U: Upper triangular matrix (mxn, n=m)
+      U: Upper triangular matrix (mxn)
       P: Permutation matrix (mxm)
   """
   # Matrix dim
@@ -67,7 +68,6 @@ def ComputeLDU(A):
       for i in range(k):
         if not np.isclose(D[i, i], 0.0):
           U[i, :] = U[i, :] / D[i, i]
-
   return L, D, U, P
 
 #
@@ -77,7 +77,7 @@ if __name__ == "__main__":
   
   for f in files:
     # Read matrix
-    A = utils.ReadMatrix(f)
+    A = ReadMatrix(f)
     
     # Matrix dim
     n = A.shape[0] # rows
