@@ -13,21 +13,43 @@ import numpy as np
 import scipy
 from scipy.spatial.transform import Rotation as R
 import argparse
-import matplotlib.pyplot as plt
+import q2
 
-# np.set_printoptions(formatter={'all':lambda x: str(fractions.Fraction(x).limit_denominator())})
-np.set_printoptions(precision=3, suppress=True)
+np.set_printoptions(precision=4, suppress=True)
 
 def ComputeRotationMatrix(yaw, pitch, roll):
   rot = R.from_euler('zyx', [yaw, pitch, roll], degrees=True)
   return rot.as_matrix()
 
-def GenerateRandom3DPoints(n_points, low=0, high=10, type=int):
-  return np.random.randint(low=low, high=high, size=(n_points, 3))
+def GenerateRandom3DPoints(n_points, low=-1000, high=1000, type=int):
+  P = high * np.random.rand(3, n_points) + low
+  # P = np.random.randint(low=low, high=high, size=(3,n_points))
+  return np.array(P)
 
 def Rotate(rot, p):
   return np.dot(rot, p)
+
+def ComputeRigidTransformation(P, Q):
+  # Find centroids 
+  pc = np.mean(P, axis=1, dtype=float).reshape(3, 1)
+  qc = np.mean(Q, axis=1, dtype=float).reshape(3, 1)
+
+  # Compute moment matrix that encodes the rotation 
+  P = P - np.tile(pc, P.shape[1])
+  Q = Q - np.tile(qc, P.shape[1])
+  W = np.dot(P, Q.T)
+  U, _, V_T = q2.ComputeSVD(W)
+  rot = np.matmul(V_T.T, U.T)
+
+  # Handle special case 
+  if np.linalg.det(rot) < 0:
+    V_T[2, :] *= -1
+    rot = np.matmul(V_T.T, U.T)
   
+  t = qc - np.dot(rot, pc)
+  return rot, t
+
+
 #
 # Main program -----------------------------------------------------------------
 if __name__ == "__main__":
@@ -40,43 +62,50 @@ if __name__ == "__main__":
     type=int, default=0)
   parser.add_argument("--roll", help="Rotation on x in degrees", 
     type=int, default=0)
+  parser.add_argument("--dz", help="Translation on z", 
+    type=int, default=0)
+  parser.add_argument("--dy", help="Translation on y", 
+    type=int, default=0)
+  parser.add_argument("--dx", help="Translation on x", 
+    type=int, default=0)
+  parser.add_argument("--visualize", 
+    help="Reading the input from a file", action="store_true", default=False)
   args = parser.parse_args() 
 
   # Compute some random points
   # N x 3
-  # P = GenerateRandom3DPoints(args.n_points)
-  # print(P, P[:, 0])
-  P = np.array([[0,0,0], [1,0,1], [0,1,0]])
-  p_center = P[0]
-  print(f"P\n{P}\np_center: {p_center}\n")
-  # Shift points 
-  Ps = P - p_center
-
+  P = GenerateRandom3DPoints(args.n_points)
   # Get rotation matrix
   # 3 x 3
   rot = ComputeRotationMatrix(args.yaw, args.pitch, args.roll)
-  print(f"Rotation\n{rot}\n")
-
-  # Compute Q = R P^T
+  t = np.array([args.dx, args.dy, args.dz]).reshape(3, 1)
+  print(t.shape)
+  # Compute Q = R * P
   # 3 x N
-  Q = np.matmul(rot, np.transpose(P))
-  Q = np.transpose(Q)
-  Qs = Q + p_center
-  print(f"Q\n{Q}\n")
-  #Q = np.matmul(P, rot)
+  Q = np.dot(rot, P) + np.tile(t, args.n_points)
+  print(f"P\n{P}\nQ\n{Q}\nRot\n{rot}\nt\n{t}")
 
-  # # Plot stuff 
-  fig = plt.figure()
-  ax = fig.add_subplot(111, projection='3d')
+  rot_est, t_est = ComputeRigidTransformation(P, Q)
+  print(f"Rot_est\n{rot_est}\nRot\n{rot}")
+  print(f"t_est\n{t_est}\nt\n{t}")
 
-  ax.plot3D(P[:, 0], P[:, 1], P[:, 2], color='gray', marker='s', label='P')
-  ax.plot3D(Ps[:, 0], Ps[:, 1], Ps[:, 2], color='blue', marker='o', label='Ps')
-  ax.plot3D(Q[:, 0], Q[:, 1], Q[:, 2], color='red', marker='o', label='Q')
-  ax.set_xlabel('x')
-  ax.set_ylabel('y')
-  ax.set_zlabel('z')
-  ax.legend()
-  plt.show()
+  assert np.allclose(rot, rot_est), "R_truth != R_est"
+  assert np.allclose(t, t_est), "t_truth != t_est"
 
+  Q_est = np.dot(rot_est, P) + np.tile(t, args.n_points)
 
-      
+  # Plot stuff 
+  if args.visualize:
+    import matplotlib.pyplot as plt
+    
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    ax.plot3D(P[0, :], P[1, :], P[2, :], color='gray', marker='o', label='P')
+    ax.plot3D(Q[0, :], Q[1, :], Q[2, :], color='green', marker='+', label='Q')
+    ax.plot3D(Q_est[0, :], Q_est[1, :], Q_est[2, :], color='red', marker='s', label='Qest')
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    ax.set_zlabel('z')
+    ax.legend()
+    plt.show()
