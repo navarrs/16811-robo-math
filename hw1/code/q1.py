@@ -2,21 +2,23 @@
 # @andrewid   ingridn
 # @date       Sept 4, 2020
 #
-# @brief      Implementation of the LDU decomposition to solve the equation  
+# @brief      Implementation of the LDU decomposition to solve the equation 
 #                                   Ax = b 
+# @notes      This code is designed to work with square, non-singular matrices. 
 
 #
 # Includes ---------------------------------------------------------------------
 import argparse
 import numpy as np
 from numpy.linalg import matrix_rank, inv
-import utils
+from utils import ReadMatrix
 
 #
-# LDU Decomposition implementation ---------------------------------------------
+# Implementation methods -------------------------------------------------------
 def DecomposeLDU(A, do_assert=False):
   """
-    Performs LDU decomposition via Gaussian reduction.
+    Performs LDU decomposition via Gaussian reduction. This code is designed for 
+    square, non-singular matrices. 
     Inputs
     ------
       A: Square (mxn, n=m), non-singular matrix that will be decomposed
@@ -29,7 +31,7 @@ def DecomposeLDU(A, do_assert=False):
       P: Permutation matrix (mxm)
   """
   assert A.shape[0] == A.shape[1] and A.shape[0] == np.linalg.matrix_rank(A), \
-    "Input matrix is invalid"
+    "Invalid: Non-square or singular matrix"
 
   if do_assert:
     # Create a copy of A to test the resulting matrices
@@ -56,10 +58,9 @@ def DecomposeLDU(A, do_assert=False):
     
     # Gaussian reduction on A
     for j in range(i+1, n):
-      # pivot
-      A[j, i] /= A[i, i]
+      A[j, i] /= A[i, i] # a
       # Update jth A row as: 
-      #    rowj = rowj - pivot * rowi
+      #    rowj = rowj - a * rowi
       for k in range(i+1, n):
         A[j, k] -=  A[j, i] * A[i, k]
 
@@ -70,7 +71,7 @@ def DecomposeLDU(A, do_assert=False):
   D = np.diag(np.diag(A))
   U = A / np.diag(D)[:, None]
 
-  # 3. If specified check result
+  # 3. If specified verify the result
   if do_assert:
     assert np.allclose(P.dot(A_), (L.dot(D)).dot(U)), "PA != LDU"
     print("Success: PA == LDU")
@@ -84,15 +85,20 @@ def Solve(A, b, do_assert):
     three main steps:
       (1) Get L, D, U, P matrices
       (2) Solve for y: Ly = b'
-      (3) Sove for x: Ux = Dinv * y
+      (3) Sove for x: Ux = D^-1 * y
     Inputs
     ------
       A: Square (nxn), non-singular matrix that will be decomposed
       b: Vector (nx1)
+      do_assert: If enabled, verifies that Ax == b
     Outputs
     -------
       x: Vector (nx1) that is a solution to Ax = b
   """
+  if do_assert:
+    A_ = A.copy()
+    b_ = b.copy()
+
   # Decompose matrix A
   n = A.shape[0]
   L, D, U, P = DecomposeLDU(A, do_assert)
@@ -119,28 +125,51 @@ def Solve(A, b, do_assert):
     x[i] = y[i]
     for j in range(n-1, i, -1):
       x[i] -= U[i, j] * x[j]
+  
+  if do_assert:
+    # Verify that Ax leads to b
+    Ax = A_.dot(x)
+    assert np.allclose(Ax, np.transpose(b_)), "Ax != b"
+    print("Success: Ax == b")
+    print(f"\nAx:\n{Ax}\nb:\n{b_}\n")
   return x
 
 #
-# Main program -----------------------------------------------------------------
-def SolveRandom(size, min_val, max_val, do_assert):
-  A = np.matrix(np.random.uniform(low=min_val, high=max_val, size=(size, size)))
-  b = np.matrix(np.random.uniform(low=min_val, high=max_val, size=(size, 1)))
+# Helper methods ---------------------------------------------------------------
+def SolveRandom(n, min_val, max_val, do_assert):
+  """
+    Creates a random matrix A(nxn) and vector b(nx1). Then, solves Ax = b for x
+    using LDU. 
+    Inputs
+    ------
+      n: Size of matrix A(nxn) and vector b(nx1)
+      min_val: Minimum allowed value to create the matrix
+      max_val: Maximum allowed value to create the matrix
+      do_assert: If enabled, verifies that Ax == b
+    Outputs
+    -------
+      Nothing
+  """
+  A = np.matrix(np.random.uniform(low=min_val, high=max_val, size=(n, n)))
+  b = np.matrix(np.random.uniform(low=min_val, high=max_val, size=(n, 1)))
   print(f"A:\n{A}\nb:\n{b}\n")
-
-  if do_assert:
-    A_ = A.copy()
-    b_ = b.copy()
-
   x = Solve(A, b, do_assert)
-  if do_assert:
-    # Verify that Ax leads to b
-    assert np.allclose(A_.dot(x), np.transpose(b_)), "Ax != b"
   print(f"x:{x}\n")
 
 def SolveFromFile(path, do_assert):
+  """
+    Loads a system of linear equations from a path and solves Ax = b for x using 
+    LDU decomposition.  
+    Inputs
+    ------
+      path: Path to the filename containing A, b
+      do_assert: If enabled, verifies that Ax == b
+    Outputs
+    -------
+      Nothing
+  """
   # Assume last row in matrix is vector b
-  A = utils.ReadMatrix(path)
+  A = ReadMatrix(path)
   b, A = A[-1, :], A[:-1, :]
   print(f"A:\n{A}\nb:\n{b}\n")
 
@@ -148,18 +177,15 @@ def SolveFromFile(path, do_assert):
     "Dimensions of A and b are nxn and nx1, but are A:{}x{} b:{}x1".format(
       A.shape[0],A.shape[1],b.shape[0])
   
-  if do_assert:
-    A_ = A.copy()
-
   x = Solve(A, b, do_assert)
-  if do_assert:
-    # Verify that Ax leads to b
-    assert np.allclose(A_.dot(x), b), "Ax != b"
-
   print(f"x:{x}\n")
 
+#
+# Main program -----------------------------------------------------------------
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()
+  
+  # Use it to verify PA == LDU and Ax == b
   parser.add_argument("--do_assert", 
     help="Asserts that PA == LDU", action="store_true", default=False)
 

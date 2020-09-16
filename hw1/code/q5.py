@@ -6,13 +6,9 @@
 
 #
 # Includes ---------------------------------------------------------------------
-import sys
-import glob
-import utils
 import numpy as np
 import scipy
 from scipy.spatial.transform import Rotation as R
-import argparse
 import q2
 
 np.set_printoptions(precision=4, suppress=True)
@@ -21,7 +17,7 @@ def ComputeRotationMatrix(yaw, pitch, roll):
   rot = R.from_euler('zyx', [yaw, pitch, roll], degrees=True)
   return rot.as_matrix()
 
-def GenerateRandom3DPoints(n_points, low=-1000, high=1000, type=int):
+def GenerateRandom3DPoints(n_points, low=-10, high=10, type=int):
   P = high * np.random.rand(3, n_points) + low
   # P = np.random.randint(low=low, high=high, size=(3,n_points))
   return np.array(P)
@@ -53,6 +49,8 @@ def ComputeRigidTransformation(P, Q):
 #
 # Main program -----------------------------------------------------------------
 if __name__ == "__main__":
+  import argparse
+  
   parser = argparse.ArgumentParser()
   parser.add_argument("--n_points", help="Points to generate", 
     type=int, default=3)
@@ -97,13 +95,13 @@ if __name__ == "__main__":
   # Plot stuff 
   if args.visualize:
     import matplotlib.pyplot as plt
-    
+
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
     ax.plot3D(P[0, :], P[1, :], P[2, :], color='gray', marker='o', label='P')
     ax.plot3D(Q[0, :], Q[1, :], Q[2, :], color='green', marker='+', label='Q')
-    ax.plot3D(Q_est[0, :], Q_est[1, :], Q_est[2, :], color='red', marker='s', label='Qest')
+    ax.scatter(Q_est[0, :], Q_est[1, :], Q_est[2, :], color='red', marker='s', label='Qest')
     ax.set_xlabel('x')
     ax.set_ylabel('y')
     ax.set_zlabel('z')
