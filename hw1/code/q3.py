@@ -9,27 +9,27 @@
 import sys
 import glob
 from enum import Enum
-import utils
+from utils import ReadMatrix
 import q2
 import numpy as np
 import scipy
-import fractions
 
-# np.set_printoptions(formatter={'all':lambda x: str(fractions.Fraction(x).limit_denominator())})
 np.set_printoptions(precision=3, suppress=True)
 
+#
+# Helpers  ---------------------------------------------------------------------
 class SolutionType(Enum):
   UNIQUE_SOL = 1
   ZERO_SOL = 2
   MANY_SOL = 3
 
-#
-# Functions --------------------------------------------------------------------
 def GetAb(filename):
-  A = utils.ReadMatrix(f)
+  A = ReadMatrix(f)
   b, A = A[-1, :], A[:-1, :]
   return A, b
 
+#
+# Problem implementation -------------------------------------------------------
 def Solve(A, b):
   """
     Computes the least squares approach to find x based on SVD
@@ -102,4 +102,3 @@ if __name__ == "__main__":
         # Test for A(x+ a*xn) = b
         Ax = A.dot(x + a * xn)
         print(f"A(x + xn) == b ? {np.allclose(Ax, b)} \nx:{x} a*xn:{a * xn} Ax:{Ax} b{b}")
-      
