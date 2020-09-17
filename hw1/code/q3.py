@@ -12,16 +12,26 @@ import numpy as np
 import scipy
 #from utils import ReadMatrix
 
-np.set_printoptions(precision=3, suppress=True)
 
 #
-# Helpers  ---------------------------------------------------------------------
+# Helpers ----------------------------------------------------------------------
+np.set_printoptions(precision=3, suppress=True)
+
 class SolutionType(Enum):
   UNIQUE_SOL = 1
   ZERO_SOL = 2
   MANY_SOL = 3
 
 def GetExamples():
+  """
+    Test examples
+    Inputs
+    ------
+      None
+    Outputs
+    -------
+      A, b: List of square matrices A and corresponding vectors b
+  """
   A1 = np.array([[1, 1, 1], [10, 2, 9], [8, 0, 7]], dtype=float)
   b1 = np.array([1, 3, 1],  dtype=float)
 
@@ -39,8 +49,7 @@ def GetExamples():
 # Problem implementation -------------------------------------------------------
 def Solve(A, b):
   """
-    Computes the least squares approach to find x based on SVD
-    Input
+    Computes the least squares approach to find x through SVD
     -----
       A: mxn matrix
       b: 1xn vector
@@ -88,9 +97,7 @@ def Solve(A, b):
 #
 # Main program -----------------------------------------------------------------
 if __name__ == "__main__":
-
   A_list, b_list = GetExamples()
-
   for i in range(len(A_list)):
     print("\n\n-----------------------------------")
     # Read matrix

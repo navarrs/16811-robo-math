@@ -120,11 +120,40 @@ def ComputeRigidTransformation(P, Q):
 #
 # Main program -----------------------------------------------------------------
 if __name__ == "__main__":
-  visualize = False
+  import argparse
+  parser = argparse.ArgumentParser()
+  # Use it to visualize
+  parser.add_argument("--visualize", help="Visualizes rigid transformation", 
+    action="store_true", default=False)
+
+  # Use it if you want custom params
+  parser.add_argument("--my_params", help="Allows to specify the rotation and translation", 
+    action="store_true", default=False)
+
+  # Custom params
+  parser.add_argument("--N", help="Number of points", default=3, type=int)
+  parser.add_argument("--yaw", help="Rotation on z", default=0, type=float)
+  parser.add_argument("--pitch", help="Rotation on y", default=0, type=float)
+  parser.add_argument("--roll", help="Rotation on x", default=0, type=float)
+  parser.add_argument("--x", help="Translation on x", default=0, type=float)
+  parser.add_argument("--y", help="Translation on y", default=0, type=float)
+  parser.add_argument("--z", help="Translation on z", default=0, type=float)
+
+  args = parser.parse_args()
+
   #
-  # Get random parameters ------------------------------------------------------
-  n, yaw, pitch, roll, x, y, z = GetRandomParameters()
-  print(f"Parameters:\nn: {n} yaw: {yaw}, pitch: {pitch} roll: {roll} dx: {x} dy: {y} dz: {z}")
+  # Get parameters -------------------------------------------------------------
+  if args.my_params:
+    n = args.N
+    yaw = args.yaw
+    pitch = args.pitch
+    roll = args.roll
+    x = args.x
+    y = args.y
+    z = args.z
+  else:
+    n, yaw, pitch, roll, x, y, z = GetRandomParameters()
+  print(f"Parameters:\n num_points: {n} \nRotation: yaw: {yaw}, pitch: {pitch} roll: {roll} \nTranslation: x: {x} y: {y} z: {z}")
 
   #
   # Generate data --------------------------------------------------------------
@@ -137,7 +166,6 @@ if __name__ == "__main__":
   #
   # Estimate transformation ----------------------------------------------------
   R_est, t_est, tc = ComputeRigidTransformation(P, Q_truth)
-  
   print(f"Rot_est\n{R_est}\nRot_truth\n{R_truth}")
   print(f"t_est\n{t_est}\nt_truth\n{t_truth}")
 
@@ -147,7 +175,7 @@ if __name__ == "__main__":
   print("Success T_truth == t_est")
 
   # Plot stuff 
-  if visualize:
+  if args.visualize:
     import matplotlib.pyplot as plt
 
     Q_est = np.dot(R_est, P) + np.tile(tc, n)

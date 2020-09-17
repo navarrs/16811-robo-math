@@ -11,7 +11,7 @@
 import argparse
 import numpy as np
 from numpy.linalg import matrix_rank, inv
-from utils import ReadMatrix
+#from utils import ReadMatrix, LatexArr
 
 #
 # Problem implementation -------------------------------------------------------
@@ -182,6 +182,15 @@ def SolveExample(A, b, do_assert):
   print(f"x:{x}\n")
 
 def GetExamples():
+  """
+    Test examples
+    Inputs
+    ------
+      None
+    Outputs
+    -------
+      A, b: List of square matrices A and corresponding vectors b
+  """
   A1 = np.array([[1, -2, 1], [1, 2, 2], [2, 3, 4]], dtype=float)
   b1 = np.array([5, 9, 2],  dtype=float)
 
@@ -218,4 +227,5 @@ if __name__ == "__main__":
     for i in range(len(A)):
       A_ = A[i]
       b_ = b[i]
+      print("\n---------------------------------")
       SolveExample(A_, b_, args.do_assert)
