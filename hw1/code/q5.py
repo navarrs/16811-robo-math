@@ -54,6 +54,7 @@ def ComputePointSet(R, t, n):
   """
     Generates ground truth pointsets P and Q
   """
+  assert n >= 3, f"Invalid: Require at least 3 points and got {n}"
   # Compute some random points P (3xN)
   P = GenerateRandom3DPoints(n)
   # Find centroid and shift the data 
@@ -123,7 +124,7 @@ if __name__ == "__main__":
   import argparse
   parser = argparse.ArgumentParser()
   # Use it to visualize
-  parser.add_argument("--visualize", help="Visualizes rigid transformation", 
+  parser.add_argument("--vis", help="Visualizes rigid transformation", 
     action="store_true", default=False)
 
   # Use it if you want custom params
@@ -175,7 +176,7 @@ if __name__ == "__main__":
   print("Success T_truth == t_est")
 
   # Plot stuff 
-  if args.visualize:
+  if args.vis:
     import matplotlib.pyplot as plt
 
     Q_est = np.dot(R_est, P) + np.tile(tc, n)
