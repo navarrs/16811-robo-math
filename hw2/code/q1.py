@@ -1,6 +1,6 @@
 # @author     Ingrid Navarro 
 # @andrewid   ingridn
-# @date       Sept 4, 2020
+# @date       Sept 24, 2020
 #
 # @brief      Polynomial interpolation using Newton's divided differences. 
 # @notes     
@@ -54,7 +54,6 @@ def InterpolateValue(X, Y, x):
     value += a
   return value
     
-  
 #
 # Helper methods ---------------------------------------------------------------
 def CosPi(x, eps=0.00001):
@@ -65,54 +64,72 @@ def ComputeX(n):
   return np.asarray([(i * 2 / n) - 1 for i in range(n)])
 
 def ComputeF(x):
-  return 2 / (1+ 9 * (x **2))
+  return 2 / (1 + 9 * (x **2))
+
+def Display(X, Y, x, y_interp, y_truth = None, err = None, diplay_all=True):
+  print(f"--------------------------------------------------------------------")
+  print(f"X: {X}\nY: {Y}")
+  if diplay_all:
+    print(f"Interpolate at x:\n{x}")
+    print(f"Interpolation result y_interp:\n{y_interp}")
+    if np.all(y_truth) != None:
+      print(f"y_truth: {y_truth}")
+  
+  if err != None:
+    print(f"error: {err}")
+  
+  
 #
 # Main program -----------------------------------------------------------------
 if __name__ == "__main__":
-  # parser = argparse.ArgumentParser()
-  # # Use it to verify PA == LDU and Ax == b
-  # parser.add_argument("--do_assert", help="Asserts that PA == LDU and Ax == b", 
-  #   action="store_true", default=False)
-  # # If testing a sample from file, add --from-file --path /path/to/file
-  # parser.add_argument("--random", help="Reading the input from a file", 
-  #   action="store_true", default=False)
-  # args = parser.parse_args()
   
-  # (a)
+  # Q1.A
+  # print(f"Question 1 (a)")
   # X = np.array([5.0, 6.0, 9.0, 11.0], dtype=np.float32)
   # Y = np.array([12.0, 13.0, 14.0, 16.0], dtype=np.float32)
   # x = 7
+  # y_interp = InterpolateValue(X, Y, x)
+  # Display(X, Y, x, y_interp)
+
   # X = np.array([0.0, 1.0, -1.0], dtype=np.float32)
   # Y = np.array([1.0, 0.0, 4.0], dtype=np.float32)
+  # x = 2.0
+  # y_interp = InterpolateValue(X, Y, x)
+  # Display(X, Y, x, y_interp)
   
-  # (b)
+  # Q1.B
+  # print(f"Question 1 (b)")
   # x = 3 / 10
   # X = np.array([0, 1/8, 1/4, 3/8, 1/2], dtype=np.float32)
-  # Y = np.asarray([CosPi(x) for x in X])
-  # print(f"X: {X}\nY: {Y}\nx:{x}\ny_interp: {InterpolateValue(X, Y, x)}\n")
-  # print(CosPi(x))
+  # Y = np.asarray([CosPi(x) for x in X], dtype=np.float32)
+  # y_interp = InterpolateValue(X, Y, x)
+  # y_truth = CosPi(x)
+  # Display(X, Y, x, y_interp, y_truth)
   
   # (c)
+  # print(f"Question 1 (c)")
   # x = 0.07
   # N = [2, 4, 40]
   # for n in N:
+  #   print(f"\nWith n: {n}")
   #   X = ComputeX(n)
-  #   Y = np.asarray([ComputeF(x) for x in X])
-  #   print("----------------------------")
-  #   print(f"X: {X}\nY: {Y}\nx: {x}\ny_interp: {InterpolateValue(X, Y, x)}\n")
-  # print(f"Actual value when x: {x} is y: {ComputeF(x)}")
+  #   Y = ComputeF(X)
+  #   y_interp = InterpolateValue(X, Y, x)
+  #   y_truth = ComputeF(x)
+  #   Display(X, Y, x, y_interp, y_truth)
   
   # (d)
+  print(f"Question 1 (d)")
   N = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 40]
-  x = 0.07
-  fx_truth = ComputeF(x)
   En = np.zeros((len(N), 1), dtype=np.float32) 
+  delta = 0.01
+  x = np.arange(-1, 1, delta)
   for i, n in enumerate(N):
-    X = np.linspace(-1, 1, n)
-    Y = np.asarray([ComputeF(x) for x in X])
+    print(f"\nWith n: {n} and interval discrete size {delta}")
+    X = ComputeX(n)
+    Y = ComputeF(X)
+    fx = ComputeF(x)
     px = InterpolateValue(X, Y, x)
-    En[i] = abs(fx_truth - px)
-    print("----------------------------")
-    print(f"n: {n}\nX: {X}\nY: {Y}\nfx: {fx_truth}\npx: {px}\nEn: {En[i]}")
-  
-  print(En)
+    err = np.abs(fx - px)
+    En[i] = err[np.argmax(err)]
+    Display(X, Y, x, px, fx, En[i], diplay_all=False)
