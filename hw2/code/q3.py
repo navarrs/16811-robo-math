@@ -7,14 +7,27 @@
 
 #
 # Includes ---------------------------------------------------------------------
-import argparse
 import numpy as np
 from enum import Enum
 import matplotlib.pyplot as plt
 
+#
+# Global parameters ------------------------------------------------------------
+global x_guess
+x_guess = 0
+
+global y_truth 
+y_truth = 0
+
+global a
+a = 0
+
+global b
+b = 0
+
 class Method(Enum):
   NEWTON = 0
-  BISECTION = 1
+  BISECTION = 0
 
 #
 # Problem implementation -------------------------------------------------------
@@ -76,7 +89,7 @@ def NewtonsMethod(f, df, x, max_iter=10, eps=0.000001):
   while not solution_found and n < max_iter:
     
     # Check if solution has been found 
-    if np.abs(np.isclose(f(x), eps)):
+    if np.abs(np.isclose(f(x), 0.0, eps)):
       solution_found = True
     else:
       # Make update
@@ -105,28 +118,42 @@ def Tan(x):
 def dTan(x):
   return 1. / (np.cos(x) ** 2)
 
-def SelectX(f, df, x = np.arange(-100, 100), method=Method.NEWTON):
-  plt.figure()
-  plt.plot(x, f(x))
+def SelectX(f, df, x = np.arange(0, 20, 0.01), title="f(x)"):
+  def onclick_newton(event):
+    global x_guess
+    x_guess = event.xdata
+    global y_truth
+    y_truth = event.ydata
+  
+  y = f(x)
+  # Reference: 
+  # https://stackoverflow.com/questions/17649418/graphing-tan-in-matplotlib
+  y[np.abs(np.cos(x)) <= np.abs(np.sin(x[1]-x[0]))] = np.nan
+  
+  fig, ax = plt.subplots()
+  cid = fig.canvas.mpl_connect('button_press_event', onclick_newton)
+  ax.set_title(title)
+  ax.axhline(y=0, color='k')
+  ax.axvline(x=0, color='k')
+  ax.plot(x, y)
+  ax.set_ylim(-5, 5)
   plt.show()
-
+  fig.canvas.mpl_disconnect(cid)
+  
 #
 # Main program -----------------------------------------------------------------
 if __name__ == "__main__":
   
-  x = np.pi / 2
-  a = -0.1
-  b = 0.1
-
-  # SelectX(Tan, dTan)
+  # Find x_low
+  print(f"*** Select x_guess < 15")
+  SelectX(Tan, dTan)
+  print(f"x_guess: {x_guess} with y_truth: {y_truth}")
+  x_low = NewtonsMethod(Tan, dTan, x_guess)
   
-  # x_root = NewtonsMethod(Tan, dTan, x)
-  # if x_root == None:
-  #   print("Could not find through Newton's. Using Bisection instead")
-  #   x_root = BisectionMethod(Tan, a, b)
-    
-  # print(f"root at: {x_root}")
-
-   
+  # Find x_high
+  print(f"*** Select x_high > 15")
+  SelectX(Tan, dTan)
+  print(f"x_guess: {x_guess} with y_truth: {y_truth}")
+  x_high = NewtonsMethod(Tan, dTan, x_guess)
   
-  
+  print(f"Interval [x_low, x_high] is [{x_low}, {x_high}]")
