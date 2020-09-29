@@ -25,43 +25,8 @@ a = 0
 global b
 b = 0
 
-class Method(Enum):
-  NEWTON = 0
-  BISECTION = 0
-
 #
 # Problem implementation -------------------------------------------------------
-def BisectionMethod(f, a, b, eps=0.000001):
-  """
-    Bisection Method to find root of f(x) given a, b
-    Inputs
-    ------
-      f        : Function that we want to find a root
-      a        : Guess x_a
-      b        : Guess x_b
-      eps      : Closest value at which we can stop iterating
-    Outputs
-    -------
-      x        : Calculated root value
-  """
-  fa = f(a)
-  fb = f(b)
-  assert fa * fb < 0, "f(a) and f(b) have equal signs"
-  
-  c = (a + b) / 2
-  fc = f(c)
-  
-  while not np.abs(np.isclose(fc, 0.0, eps)):
-    fa, fb = f(a), f(b)
-    if fc * fa > 0:
-      a = c
-    else:
-      b = c
-      
-    c = (a + b) / 2
-    fc = f(c)
-  return c
-
 def NewtonsMethod(f, df, x, max_iter=10, eps=0.000001):
   """
     Newton's Method algorithm to find a root of f(x). If the method fails to 
@@ -118,42 +83,32 @@ def Tan(x):
 def dTan(x):
   return 1. / (np.cos(x) ** 2)
 
-def SelectX(f, df, x = np.arange(0, 20, 0.01), title="f(x)"):
-  def onclick_newton(event):
-    global x_guess
-    x_guess = event.xdata
-    global y_truth
-    y_truth = event.ydata
-  
-  y = f(x)
-  # Reference: 
-  # https://stackoverflow.com/questions/17649418/graphing-tan-in-matplotlib
-  y[np.abs(np.cos(x)) <= np.abs(np.sin(x[1]-x[0]))] = np.nan
-  
-  fig, ax = plt.subplots()
-  cid = fig.canvas.mpl_connect('button_press_event', onclick_newton)
-  ax.set_title(title)
-  ax.axhline(y=0, color='k')
-  ax.axvline(x=0, color='k')
-  ax.plot(x, y)
-  ax.set_ylim(-5, 5)
-  plt.show()
-  fig.canvas.mpl_disconnect(cid)
-  
+def FindRoot(f, df, low_val, high_val):
+  # Find x_low
+  x_guess = np.random.uniform(low=low_val, high=high_val)
+  y_truth = f(x_guess)
+  print(f"x_guess: {x_guess} with y_truth: {y_truth}")
+  x_root = NewtonsMethod(f, df, x_guess)
+  return x_root
+
 #
 # Main program -----------------------------------------------------------------
 if __name__ == "__main__":
+  n_tests = 1
   
-  # Find x_low
-  print(f"*** Select x_guess < 15")
-  SelectX(Tan, dTan)
-  print(f"x_guess: {x_guess} with y_truth: {y_truth}")
-  x_low = NewtonsMethod(Tan, dTan, x_guess)
+  # Regions of convergence to start Newton's
+  x_low_guess_range = [11.3, 13.8]
+  x_high_guess_range = [14.3, 16.8]
   
-  # Find x_high
-  print(f"*** Select x_high > 15")
-  SelectX(Tan, dTan)
-  print(f"x_guess: {x_guess} with y_truth: {y_truth}")
-  x_high = NewtonsMethod(Tan, dTan, x_guess)
-  
-  print(f"Interval [x_low, x_high] is [{x_low}, {x_high}]")
+  for n in range(n_tests):
+    print(f"*** Test {n+1}/{n_tests}")  
+    # Compute lower root < 15
+    x_low = FindRoot(Tan, dTan, x_low_guess_range[0], x_low_guess_range[1])
+    # Compute higher root > 15
+    x_high = FindRoot(Tan, dTan, x_high_guess_range[0], x_high_guess_range[1])
+    
+    if x_low == None or x_high == None:
+      print(f"Test {n+1} failed to converge")
+      continue
+    
+    print(f"Interval [x_low, x_high] is [{x_low}, {x_high}]")
