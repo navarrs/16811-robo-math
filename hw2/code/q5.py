@@ -6,18 +6,12 @@
 
 #
 # Includes ---------------------------------------------------------------------
-import argparse
 import numpy as np
-from enum import Enum
 import matplotlib.pyplot as plt
-
-class Method(Enum):
-  NEWTON = 0
-  BISECTION = 1
 
 #
 # Problem implementation -------------------------------------------------------
-def MullerMethod(f, f2, X, max_iter=100, eps=0.0000001):
+def MullerMethod(f, f2, X, max_iter=100, eps=0.00000001):
   """
     Mullers's Method algorithm to find a root of f(x). If the method fails to 
     converge, it returns None.
@@ -80,7 +74,8 @@ def MullerMethod(f, f2, X, max_iter=100, eps=0.0000001):
     if np.isclose(fx3, 0.0, eps):
       solution_found = True
   
-    if np.isclose(x, 0.0, eps) or n >= max_iter:
+    # if np.isclose(x, 0.0, eps) or n >= max_iter:
+    if n >= max_iter:
       print(f"Solution cannot be found with {n} iterations")
       return None
     X[0], X[1], X[2] = X[1], X[2], x3
@@ -93,6 +88,22 @@ def MullerMethod(f, f2, X, max_iter=100, eps=0.0000001):
 #
 # Helper methods ---------------------------------------------------------------
 def FindRoots(poly, X, n_roots, n_tries = 15):
+  """
+    Iteratively finds the roots of a polynomial using Muller method. For each 
+    root it finds it updates the "previous" polynomial as follows: 
+                  f(x) = f(x) / (x - x_root)
+    Note: If it finds the same root, it will perturb x_guess to try to find a
+          different root. However, this is done empirically. 
+    Inputs
+    ------
+      poly    : The coefficients of the polynomial .
+      X       : [x0, x1, x2] correponding to the initial guesses. 
+      n_roots : How many roots are expected to be found 
+      n_tries : How many times to attempt to find a root
+    Output
+    ------
+      roots   : All the found roots. 
+  """
   roots = np.zeros((n_roots), dtype=np.complex)
   X_ = X.copy()
   roots[0] = MullerMethod(poly, None, X_)
