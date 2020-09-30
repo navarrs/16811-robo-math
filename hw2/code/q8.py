@@ -169,8 +169,8 @@ if __name__ == "__main__":
     guessp = new_path[:, p:p+2]
     t_ = t - p
     
-    # p_interp[i] = guessp[0]*(1-t_)+guessp[1]*(t_)
-    # print(p_interp[i], guessp[0], guessp[1])
+    p_interp[i] = guessp[:, 0]*(1-t_)+guessp[:, 1]*(t_)
+    print(p_interp[i], guessp[:, 0], guessp[:, 1])
   # print(p_interp.shape) 
   # print(interp_path.shape)
-  # Plot(paths, new_path, p_interp, ring_of_fire, destination)
+  Plot(paths, new_path, p_interp, ring_of_fire, destination)
