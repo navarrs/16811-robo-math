@@ -9,6 +9,7 @@
 import argparse
 from math import cos
 import numpy as np
+import matplotlib.pyplot as plt
 
 #
 # Problem implementation -------------------------------------------------------
@@ -108,9 +109,22 @@ def Test(X, Y, x_test, y_truth = None, display_all=True):
     print(f"Interpolation result y_interp:\n{y_interp}")
     print(f"y_truth:\n{y_truth}\nerror: {err}")
   
-  return err
+  return err, y_interp
   
+
+def Plot(X, Y, x, y, n):
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  ax.set_title(f'Interpolation with {n} points')
+  ax.set_xlabel('x')
+  ax.set_ylabel('y')
   
+  plt.plot(X, Y, color='r', label='actual')
+  plt.plot(x, y, color='b', label='interpolated')
+  
+  plt.legend(loc='upper left')
+  plt.show()
+ 
 #
 # Main program -----------------------------------------------------------------
 if __name__ == "__main__":
@@ -156,8 +170,14 @@ if __name__ == "__main__":
     print(f"\n*** With n: {n}")
     X = ComputeX(n)
     Y = ComputeF(X)
+    X_ = X.copy()
+    Y_ = Y.copy()
+    x_test_ = x.copy()
     # y_truth
     fx = ComputeF(x)
-    err = Test(X, Y, x, fx, display_all=False)
+    err, y_interp = Test(X, Y, x, fx, display_all=False)
+    # Plot(X_, Y_, x_test_, y_interp, n)
     En[i] = err[np.argmax(err)]
     print(f"*** Max error: {En[i]}")
+    
+    

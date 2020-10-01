@@ -8,6 +8,7 @@
 # Includes ---------------------------------------------------------------------
 import numpy as np
 import sympy as sp
+from scipy import linalg
 from enum import Enum
 import matplotlib.pyplot as plt
 
@@ -17,14 +18,6 @@ class TypePath(Enum):
 
 #
 # Problem implementation -------------------------------------------------------
-# def ComputeWeights(p0, p1, p2, p):
-#   A = np.matrix([[1.0, 1.0, 1.0],
-#                  [p0[0], p1[0], p2[0]], 
-#                  [p0[1], p1[1], p2[1]]])
-#   b = np.array([1.0, p[0], p[1]])
-#   return np.dot(np.linalg.inv(A), b)
-  
-
 def ConstructPath(paths, weights):
   """
     Constructs a new path following this formula:
@@ -43,15 +36,14 @@ def ConstructPath(paths, weights):
     new_path += weights[i] * path
   return new_path  
 
-#
-# Helper methods ---------------------------------------------------------------
-def PickPaths(paths_all, n_paths=3, u=np.array([5.0, 8.0]), l=np.array([8.0, 5.0])):    
+def PickPaths(paths, p0, n_paths=3, u=np.array([5.0, 8.0]), l=np.array([8.0, 5.0])):    
   """
     Selects n random paths from the list and checks all of them go to the same 
     direction.
     Input
     -----
-      paths_all: List of all paths
+      paths: List of all paths
+      p0: Starting location 
       n_paths: How many paths to extact
       u: Upper bound direction
       l: ;ower bound direction
@@ -60,47 +52,97 @@ def PickPaths(paths_all, n_paths=3, u=np.array([5.0, 8.0]), l=np.array([8.0, 5.0
       paths: Selected paths
       type_path: i.e. Upper / Lower paths selcted
   """
-  def GetPath(i):
-    path = [
-      paths_all[i].split(sep=' ')[:-1],
-      paths_all[i+1].split(sep=' ')[:-1]
-    ]
-    return np.asarray(path, dtype=np.float32)
-
-  def GetIndex():
-    return np.random.randint(0, len(paths_all)/2) * 2
+  def ComputeWeights(pi, pj, pk):
+    """
+      Computes the Barycentric weights.
+    """
+    A = np.matrix([[pi[0], pj[0], pk[0]], 
+                   [pi[1], pj[1], pk[1]], 
+                   [1.0,   1.0,   1.0]], dtype=np.float)
+    b = np.array([p0[0], p0[1], 1.0], dtype=np.float)
+    
+    # Based on hw1-q3, solve for the weights using least squares
+    m = A.shape[0]
+    n = A.shape[1]
+    U, s, V_T = linalg.svd(A)
+    S = linalg.diagsvd(s, m, n)
+    k = np.linalg.matrix_rank(S)
+    U_T, V = np.transpose(U), np.transpose(V_T)
+    S_inv = S
+    for i in range(k):
+      S_inv[i, i] = 1 / S_inv[i, i]
+    S_inv = S_inv.transpose()
+    # x = V 1/S U_T b
+    x  = np.dot(np.matmul(np.matmul(V, S_inv), U_T), b)
+    return x
   
-  def GetTypePath(p, n_points=10):
+  def GetTypePath(p, n=10):
+    """
+      Finds the direction of the path; i.e. either lower or upper path.
+    """
     mid = (p.shape[1]+1) / 2
-    points = p[:, int(mid-n_points/2):int(mid+n_points//2)]
+    points = p[:, int(mid-n/2):int(mid+n//2)]
     du = np.linalg.norm(u.reshape(2, 1) - points)
     dl = np.linalg.norm(l.reshape(2, 1) - points)
     return TypePath.UPPER if du < dl else TypePath.LOWER
+
+  def FindLastPath(paths_ijk, idx):
+    for i in range(2, len(idx)):
+      next_path = paths[idx[i]:idx[i]+2, :]
+      w = ComputeWeights(paths_ijk[0][:, 0], paths_ijk[1][:, 0], next_path[:, 0])
+      if (w > 0.0).all() and np.isclose(np.sum(w), 1.0):
+        return next_path, w
+    return None, None
+  
+  # Find closest starting points in paths from the desired start point
+  paths_p0 = paths[:, 0].reshape(int(paths.shape[0]/2), 2)
+  dist = np.sum(abs(paths_p0-p0), axis=1)
+  # dist = np.sum((paths_p0-p0)**2, axis=1)
+
+  lidx = []
+  uidx = []
+  for i in np.argsort(dist, axis=0) * 2:
+    if TypePath.LOWER == GetTypePath(paths[i:i+2, :]):
+      lidx.append(i)
+    else:
+      uidx.append(i)
+  
+  # Check with lower paths first 
+  paths_ijk = [paths[lidx[0]:lidx[0]+2, :], 
+               paths[lidx[1]:lidx[1]+2, :]] 
+  next_path, w = FindLastPath(paths_ijk, lidx)
+  
+  if np.any(next_path) == None:
+    paths_ijk = [paths[uidx[0]:uidx[0]+2, :], 
+                 paths[uidx[1]:uidx[1]+2, :]] 
+    next_path, w = FindLastPath(paths_ijk, uidx)
     
-  pidx = []
-  pidx.append(GetIndex())
+  paths_ijk.append(next_path)
+
+  # Compute weights 
+  # print(paths_ijk[0][:, 0], paths_ijk[1][:, 0], paths_ijk[2][:, 0], w)
   
-  paths = []
-  paths.append(GetPath(pidx[0]))
-  type_path = GetTypePath(paths[0])
+  return paths_ijk, w
+
+def ComputeP(t, path):
+  """
+    Computes the interpolated value p(t) given the path
+    Inputs
+    ------
+      t: time step at which to compute p(t)
+      path: X.Y values of the path. 
+  """
+  total_t_steps = path.shape[1] - 2 # should be 48
+  if t < 0.0:
+    return path[:, 0]
+  elif t > total_t_steps:
+    return path[:, -1]
   
-  for i in range(1, n_paths):
-    # Get new index 
-    found_index = False
-    while not found_index:
-      idx = GetIndex()
-      
-      if not idx in pidx:
-        
-        # Check if path in this index is valid 
-        p = GetPath(idx)
-        
-        if type_path == GetTypePath(p):
-          paths.append(p)
-          pidx.append(idx)
-          found_index = True
-  
-  return paths, type_path
+  t_ = t - int(t)
+  guessp = path[:, int(t):int(t)+2]
+
+  # Reference; https://en.wikipedia.org/wiki/Linear_interpolation
+  return guessp[:, 0] * (1-t_) + guessp[:, 1] * t_
 
 def Plot(paths, rpath, ipath, ring_of_fire, destination):
   fig = plt.figure()
@@ -113,20 +155,20 @@ def Plot(paths, rpath, ipath, ring_of_fire, destination):
   
   # Initial paths
   c = ['r', 'g', 'b']
+  # print(paths.shape)
   for i, path in enumerate(paths):
     plt.plot(path[0], path[1], color=c[i], label=f'path {i}', lw=1)
   
   # Constructed path 
-  plt.plot(rpath[0], rpath[1], 'm', label='new path',lw=2)
+  plt.plot(rpath[0], rpath[1], 'm', label='new path',lw=1)
   
   # Interpolated path
-  plt.plot(ipath[:, 0], ipath[:, 1], 'c-', label='interpolated path',lw=2)
+  plt.plot(ipath[0], ipath[1], 'c-', label='interpolated path',lw=2)
   
   # Plot ring of fire
   rf = plt.Circle(ring_of_fire["center"], ring_of_fire["radius"], 
                   color='r', label='ring of fire')
   ax.add_artist(rf)
-  
   
   # Plot destination 
   plt.scatter(destination[0], destination[1], color='k', s=100, label='destination')
@@ -138,39 +180,27 @@ def Plot(paths, rpath, ipath, ring_of_fire, destination):
 # Main program -----------------------------------------------------------------
 if __name__ == "__main__":
   
-  # Q7.A
+  # Q7.B - D
+  # Read paths 
+  paths = np.loadtxt('paths.txt', delimiter=' ')
+  # p_start = np.array([[0.8, 1.8]], dtype=np.float)
+  p_start = np.array([[0.8, 1.8], [2.2, 1.0], [2.7, 1.4]], dtype=np.float)
+  p_dest = np.array([8.0, 8.0])
+  ring_of_fire = {"center": [5.0, 5.0], "radius": 1.5}
   
-  
-  # Q7.B
-  # Computes x roots (of the resultant)
-  
-  start_location = [[0.8, 1.8], [2.2, 1.0], [2.7, 1.4]]
-  
-  print(f"\n------------------------------------------------------------------")
-  print(f"Question 8 (b) - Algorithm to create unicycle path")
-  ring_of_fire = {"center": (5.0, 5.0), "radius": 1.5}
-  destination = [8, 8]
-  f = open("paths.txt", 'r')
-  paths_all = f.readlines()
-  paths, type_path = PickPaths(paths_all)
-  # print(paths)
-  
-  # Construct new path 
-  weights = [0.3, 0.4, 0.3]
-  new_path = ConstructPath(paths, weights)
-  # Plot(paths, new_path, ring_of_fire, destination)
-  
-  # Interpolate values 
-  t_steps = np.arange(0, new_path[0].shape[0]-5, 0.1)
-  p_interp = np.zeros((t_steps.shape[0], 2), dtype=np.float)
-  # print(new_path.shape)
-  for i, t in enumerate(t_steps):
-    p = int(t)
-    guessp = new_path[:, p:p+2]
-    t_ = t - p
+  for p0 in p_start:
+    # Pick starting paths and get corresponding weights
+    start_paths, w = PickPaths(paths, p0)
     
-    p_interp[i] = guessp[:, 0]*(1-t_)+guessp[:, 1]*(t_)
-    print(p_interp[i], guessp[:, 0], guessp[:, 1])
-  # print(p_interp.shape) 
-  # print(interp_path.shape)
-  Plot(paths, new_path, p_interp, ring_of_fire, destination)
+    # Construct the new path
+    new_path = ConstructPath(start_paths, w)
+    # Plot(start_paths, new_path, ring_of_fire, p_dest)
+    
+    # Interpolate
+    t_steps = np.arange(0, new_path.shape[1], 0.2)
+    interp_path = np.zeros((2, t_steps.shape[0]), dtype=np.float)
+    
+    for i, ts in enumerate(t_steps):
+      interp_path[:, i] = ComputeP(ts, new_path)
+    
+    Plot(start_paths, new_path, interp_path, ring_of_fire, p_dest)
