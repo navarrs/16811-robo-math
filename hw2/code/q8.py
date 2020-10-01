@@ -144,7 +144,7 @@ def ComputeP(t, path):
   # Reference; https://en.wikipedia.org/wiki/Linear_interpolation
   return guessp[:, 0] * (1-t_) + guessp[:, 1] * t_
 
-def Plot(paths, rpath, ipath, ring_of_fire, destination):
+def Plot(paths, rpath, ipath, ring_of_fire, p_dest, p0):
   fig = plt.figure()
   ax = fig.add_subplot(111)
   ax.set_title('Unicycle problem')
@@ -171,7 +171,11 @@ def Plot(paths, rpath, ipath, ring_of_fire, destination):
   ax.add_artist(rf)
   
   # Plot destination 
-  plt.scatter(destination[0], destination[1], color='k', s=100, label='destination')
+  plt.scatter(p_dest[0], p_dest[1], color='k', s=50, label='p_dest')
+  
+  # plot start
+  plt.scatter(p0[0], p0[1], color='c', s=50, label='p_start')
+  ax.annotate(f"[{p0[0]},{p0[1]}]", xy=(p0[0], p0[1]-0.5), fontsize=8)
   
   plt.legend(loc='upper left')
   plt.show()
@@ -203,4 +207,4 @@ if __name__ == "__main__":
     for i, ts in enumerate(t_steps):
       interp_path[:, i] = ComputeP(ts, new_path)
     
-    Plot(start_paths, new_path, interp_path, ring_of_fire, p_dest)
+    Plot(start_paths, new_path, interp_path, ring_of_fire, p_dest, p0)

@@ -131,7 +131,7 @@ if __name__ == "__main__":
   
   # Q1.A
   print(f"\n------------------------------------------------------------------")
-  print(f"Question 1 (a) - Interpolating f(x) = (x - 1)^2")
+  print(f"Question 1 (a) (example) - Interpolating f(x) = (x - 1)^2")
   # Interpolating f(x) = (x - 1)^2
   X = np.array([0.0, 1.0, -1.0], dtype=np.float32)
   Y = np.array([1.0, 0.0, 4.0], dtype=np.float32)
@@ -179,5 +179,3 @@ if __name__ == "__main__":
     # Plot(X_, Y_, x_test_, y_interp, n)
     En[i] = err[np.argmax(err)]
     print(f"*** Max error: {En[i]}")
-    
-    

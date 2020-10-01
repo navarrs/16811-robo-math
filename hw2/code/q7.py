@@ -126,6 +126,6 @@ if __name__ == "__main__":
   # Q7.C
   # Mark the roots
   print(f"\n------------------------------------------------------------------")
-  print(f"Question 7 (c) - Mark the shared roots")
+  print(f"Question 7 (c) - Mark the shared roots on plot")
   roots = roots[~np.all(np.isclose(roots, 0.0), axis=1)]
   Plot(roots)
