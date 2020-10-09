@@ -1,1 +1,1 @@
-# robo-math
+# Math for Robotics
