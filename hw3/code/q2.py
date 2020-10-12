@@ -14,7 +14,7 @@ from scipy import linalg
 #
 # Helper methods ---------------------------------------------------------------
 
-def Plot(x, y, x2, y2, title='f(x)'):
+def Plot(x, y, x2, y2, title='Data fitting plot'):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.set_title(title)
@@ -22,8 +22,8 @@ def Plot(x, y, x2, y2, title='f(x)'):
     ax.set_ylabel('y')
     ax.axhline(y=0, color='k')
     ax.axvline(x=0, color='k')
-    plt.plot(x, y, color='r', label='f(x)')
-    plt.plot(x2, y2, color='b', label='f(x)')
+    plt.scatter(x, y, color='m', label='Data', s=8)
+    plt.plot(x2, y2, color='b', label='Fitted f(x)')
     plt.legend(loc='upper left')
     plt.show()
 
@@ -47,13 +47,14 @@ def CreateBasis(x, n_poly=1, n_fourier=1, n=1):
 
     return basis
 
-def Approximate():
-  pass
+def Approximate(A, f):
+  c = Solve(A, f)
+  f_ = np.matmul(A, c.T)
+  return f_, c
 
 #
 # From Homework 1
 # ------------------------------------------------------------------------------
-
 
 def ComputeSVD(A):
     """
@@ -118,23 +119,12 @@ if __name__ == "__main__":
 
     # 1, x, x**2, cos(pix), sin(pix)
     # 3 poly 8 fourier
-    basis = CreateBasis(x, 3, 8)
+    # basis = CreateBasis(x, 3, 8)
     
     # 3 poly 4 fourier cos1 sin2 cos3 sin4
-    basis = CreateBasis(x, 3, 4)
-
-    # print(basis[1])
-
-    # basis = CreateBasisTrig(x, 4)
-    # print(basis)
-
-    coeffs, ns, sol = Solve(basis, y)
-    # print(coeffs, sol)
-
-    y_ = np.matmul(basis, coeffs.T)
-    # y_ = y.copy()
-    # for i in range(y.shape[0]):
-    #   y_[i] = coeffs[0] + coeffs[1]*x[i] + coeffs[2] * x[i] **2
-    #   y_[i] += coeffs[3] * np.cos(np.pi*x[i]) + coeffs[4] * np.sin(np.pi*x[i])
-
+    # A = CreateBasis(x, 3, 4)
+    A = CreateBasis(x, 3, 4)
+    y_, c = Approximate(A, y)
+    print(f"Coefficients: {c}")
     Plot(x, y, x, y_)
+    
