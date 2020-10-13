@@ -10,6 +10,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.linalg
 import q2
+import random
+from enum import Enum
+
+class PLANE(Enum):
+  LZ = 0
+  HZ = 1
+  LX = 2
+  HX = 3
 
 #
 # Problem implementation -------------------------------------------------------
@@ -26,16 +34,50 @@ def EstimatePlane(P):
   U, S, V_T = scipy.linalg.svd(Pc)
   n_ = U[:, -1]
   d_ = np.mean(abs(np.dot(P, n_))/np.linalg.norm(n_))
-  print(np.mean(abs((1 - (np.dot(P, n_) + d_))/np.linalg.norm(n_))))
-  # avg_d = np.mean(abs(1 - (np.dot(P, n_) + d_))/np.linalg.norm(n_))
-  # print(avg_d)
-  # Denormalize n
-  # n = n_ / d_
-  # d = np.mean(abs(1 - np.dot(P, n))/np.linalg.norm(n))
-  
+  avg_d = np.mean(abs((1 - (np.dot(P, n_) + d_))/np.linalg.norm(n_)))
+    
   n = n_
   d = d_
-  return n, d
+  return n, d, avg_d
+
+def RANSAC(points, n_samples = 10, n_iters = 100, dthresh = 0.015):
+  N = len(points)
+  
+  best_ninliers = 0
+  best_n = 0
+  best_d = 0
+  best_avg_d = 0
+  for i in range(n_iters):
+    # Get sample points
+    samples = random.sample(range(N), n_samples)
+    testp = points[samples]
+    
+    # Estimate a plane from sample points
+    n, d, avg_d = EstimatePlane(testp)
+    # print(n, d)
+    
+    # Count the number of inliers
+    inliers = 0
+    for j in range(N):
+      p = points[j]
+      d_ = np.mean(abs((1 - (np.dot(p, n) + d))/np.linalg.norm(n)))
+      if d_ <= dthresh:
+        inliers += 1
+    
+    if inliers > best_ninliers:
+      best_ninliers = inliers
+      best_n = n
+      best_d = d
+      best_avg_d = avg_d
+  
+  print(f"Best model n: {best_n}, d: {best_d}, av. d: {best_avg_d} total inliers {best_ninliers}")
+  return best_n, best_d, best_avg_d
+
+def MultiPlane(points, n_samples = 10, n_iters = 100, dthresh = 0.015):
+  
+  
+  
+  
 
 #
 # Helper methods ---------------------------------------------------------------
@@ -80,17 +122,29 @@ if __name__ == "__main__":
     print(f"\n----------------------------------------------------------------")
     print(f"Question 4(a) - clear_table.txt")
     clear_table = np.loadtxt("../data/clear_table.txt", dtype=np.float)
-    plane, avg_d = EstimatePlane(clear_table)
-    print(f"Plane normal: {plane} Av. distance {avg_d}")
-    Plot(clear_table, plane, avg_d)
+    n, d, avg_d = EstimatePlane(clear_table)
+    print(f"Plane normal: {n} Distance: {d}, Av. dist: {avg_d}")
+    # Plot(clear_table, plane, avg_d, "Clear Table Point Cloud")
     
     # Q4.B
     print(f"\n----------------------------------------------------------------")
     print(f"Question 4(b) - cluttered_table.txt")
     cluttered_table = np.loadtxt("../data/cluttered_table.txt", dtype=np.float)
-    plane, avg_d = EstimatePlane(cluttered_table)
-    print(f"Plane normal: {plane} Av. distance {avg_d}")
-    Plot(cluttered_table, plane, avg_d)
+    n, d, avg_d = EstimatePlane(cluttered_table)
+    print(f"Plane normal: {n} Distance: {d}, Av. dist: {avg_d}")
+    # Plot(cluttered_table, plane, avg_d, "Cluttered Table Point Cloud")
     
     # Q1.C
+    print(f"\n----------------------------------------------------------------")
+    print(f"Question 4(c) - cluttered_table.txt")
+    # n, d, avg_d = RANSAC(cluttered_table, 10, 10)
+    # Plot(cluttered_table, n, d, "Cluttered Table Point Cloud")
+    print(f"Best model normal: {n} Distance: {d}, Av. dist: {avg_d}")
     
+    # Q1.D
+    print(f"\n----------------------------------------------------------------")
+    print(f"Question 4(d) - clean_hallway.txt")
+    clean_hallway = np.loadtxt("../data/clean_hallway.txt", dtype=np.float)
+    # n, d, avg_d = RANSAC(clean_hallway, 10, 100)
+    Plot(clean_hallway) #, n, d, "Cluttered Table Point Cloud")
+    # print(f"Best model normal: {n} Distance: {d}, Av. dist: {avg_d}")
