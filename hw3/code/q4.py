@@ -102,6 +102,18 @@ def RANSAC(points, n_samples=5, n_iters=100, dthresh=0.005):
     return best_n, best_d, best_avg_d
 
 def MultiPlane(points, sort_dir=[], tol=0.003):
+    """
+        Computes all the planes in the point cloud. This assumes that all the
+        planes containg roughly the same amount of points.
+        Inputs
+        ------
+            points: Point set representing the point clouds
+            sort_dir: Directions in which the point clouds will be sorted to 
+                find the planes
+        Outputs
+        -------
+            planes: All the found planes in the format (n, d, avd)
+    """
     N = len(points)
     labels = -np.ones(N)
     planes = []
@@ -125,23 +137,70 @@ def MultiPlane(points, sort_dir=[], tol=0.003):
     return planes
 
 
-def ExtractSeeds(points, axis, n_lpr=100, thresh=0.05, asc=True):
-    mean = np.median(points[:n_lpr, axis.value])
-    # print(points[:n_lpr, axis.value])
+def ExtractSeeds(points, axis, nrp=100, thresh=0.01, asc=True):
+    """
+        Extracts seed points based on a mean value within a set of points. 
+        Inputs
+        ------
+            points: Point set representing the point cloud
+            axis: Axis along which the mean will be computed
+            nrp: Number of representative points used to compute the mean
+            thresh: Threshold value to consider a point as part of the seeds
+        Outputs
+        -------
+            seeds: Seed points that met the expected condition.
+    """
+    mean = np.median(points[:nrp, axis.value])
+    # print(points[:nrp, axis.value])
     if asc:
       return points[points[:, axis.value] < mean + thresh]
     return points[points[:, axis.value] > mean - thresh]
 
-def EstimateRefine(points, axis, n_lpr=100, n_iter=5, dthresh=0.005, asc=True):
-    seeds = ExtractSeeds(points, axis, n_lpr, asc=asc)
-    n, d, avd = EstimatePlane(seeds)
-    for i in range(n_iter):
+def EstimateRefine(points, axis, nrp=200, n_refine=3, dthresh=0.05, asc=True):
+    """
+        Estimates a plane and performs refinement. 
+        Inputs
+        ------
+            points: Point set representing the point cloud
+            axis: Axis along which the seed mean is computed
+            nrp: Number of representative points used to compute the mean
+            n_refine: Number of refinements to do
+            dthresh: Threshold value to consider a point as part of the new seeds
+        Outputs
+        -------
+            n: normal of the plane
+            d: distance of the plane
+            avd: average distance from the points to the plane 
+    """
+    seeds = ExtractSeeds(points, axis, nrp, asc=asc)
+    n, d, avd = RANSAC(seeds, n_iters=50)
+    for i in range(n_refine):
       D = abs(np.dot(points, n) - d)
       refined = points[D <= dthresh]
-      n, d, avd = EstimatePlane(seeds)
+      n, d, avd = RANSAC(refined, n_iters=50)
     return n, d, avd
 
-def MultiPlaneClutter(points_, sort_dir=[], n_segments=1):
+def ComputeSmoothness(points, n, d, dthresh=0.1):
+    """
+        Computes the smoothness value of a set of points in a plane.
+    """
+    D = abs(np.dot(points, n) - d)
+    p = points[D <= dthresh]
+    return np.mean(abs(np.dot(p, n) - d)) 
+
+def MultiPlaneClutter(points_, sort_dir=[]):
+    """
+        Computes all the planes in the point cloud. This assumes clutter in the
+        point cloud. The method also computes the smoothness value. 
+        Inputs
+        ------
+            points: Point set representing the point clouds
+            sort_dir: Directions in which the point clouds will be sorted to 
+                find the planes
+        Outputs
+        -------
+            planes: All the found planes in the format (n, d, avd)
+    """
     N = len(points_)
     labels = -np.ones(N)
     planes = []
@@ -155,19 +214,21 @@ def MultiPlaneClutter(points_, sort_dir=[], n_segments=1):
             
         elif sortd == SortDirection.Y_DES:
             points = points[np.argsort(points[:, Axis.Y.value])][::-1]
-            n, d, avd = EstimateRefine(points, Axis.Y, n_lpr=1000, asc=False)
+            n, d, avd = EstimateRefine(points, Axis.Y, nrp=1000, asc=False)
             # Plot(points, [[n, d, avg_d]])
         
         elif sortd == SortDirection.X_ASC:
             points = points[np.argsort(points[:, Axis.X.value])]
-            n, d, avd = EstimateRefine(points, Axis.X, n_lpr=200)
+            n, d, avd = EstimateRefine(points, Axis.X)
             # Plot(points, [[n, d, avg_d]])
         
         elif sortd == SortDirection.X_DES:
             points = points[np.argsort(points[:, Axis.X.value])][::-1]
-            n, d, avd = EstimateRefine(points, Axis.X, n_lpr=200, asc=False)
+            n, d, avd = EstimateRefine(points, Axis.X, asc=False)
             # Plot(points, [[n, d, avg_d]])
         print(f"PLANE {i} -> n: {n} d: {d} av. d: {avd}")
+        smoothness = ComputeSmoothness(points, n, d)
+        print(f"Smoothness: {smoothness}")
         planes.append([n, d, avd])
     return planes
 
@@ -182,7 +243,7 @@ def Plot(points, plane=[], colors=['b'], axis_d=[Axis.Y], title="Point Cloud"):
     x, y, z = points[:, 0], points[:, 1], points[:, 2]
     minx, maxx = np.min(x), np.max(x)
     miny, maxy = np.min(y), np.max(y)
-    minz, maxz = np.min(z), np.max(z)
+    minz, maxz = np.max(z), np.min(z)
 
     # PLOT POINT CLOUD
     # X - positive right
@@ -269,7 +330,7 @@ if __name__ == "__main__":
         Plot(clean_hallway, plane=planes, colors=colors, axis_d=axis_dir,
              title="Clean Hallway Point Cloud")
 
-    # Q1.D
+    # Q1.E
     print(f"\n----------------------------------------------------------------")
     print(f"Question 4(e) - cluttered_hallway.txt")
     cluttered_hallway = np.loadtxt(
@@ -278,7 +339,7 @@ if __name__ == "__main__":
                  SortDirection.X_ASC, SortDirection.X_DES]
     colors = ['b', 'g', 'm', 'c']
     axis_dir = [Axis.Y, Axis.Y, Axis.X, Axis.X]
-    planes = MultiPlaneClutter(cluttered_hallway, sort_dirs, n_segments=4)
+    planes = MultiPlaneClutter(cluttered_hallway, sort_dirs)
     if display:
         Plot(cluttered_hallway, plane=planes, colors=colors, axis_d=axis_dir,
             title="Cluttered Hallway Point Cloud")
