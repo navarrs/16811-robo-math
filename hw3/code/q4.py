@@ -105,7 +105,7 @@ def MultiPlane(points, sort_dir=[], tol=0.003):
     N = len(points)
     labels = -np.ones(N)
     planes = []
-    for sortd in sort_dir:
+    for i, sortd in enumerate(sort_dir):
         if sortd == SortDirection.Y_ASC:
             # Sort pointcloud ascending on Y
             points = points[np.argsort(points[:, Axis.Y.value])]
@@ -120,6 +120,7 @@ def MultiPlane(points, sort_dir=[], tol=0.003):
             points = points[np.argsort(points[:, Axis.X.value])]
             l, h = -int(N/4), -1
         n, d, avd = RANSAC(points[l:h], dthresh=tol)
+        print(f"PLANE {i} -> n: {n} d: {d} av. d: {avd}")
         planes.append([n, d, avd])
     return planes
 
@@ -191,7 +192,7 @@ def Plot(points, plane=[], colors=['b'], axis_d=[Axis.Y], title="Point Cloud"):
     ax.set_ylabel('z')
     ax.set_zlabel('y')
 
-    ax.scatter(x, z, y, color='r')
+    ax.scatter(x, z, y, color='r', label="point cloud", marker='.')
     ax.set_xlim(minx, maxx)
     ax.set_ylim(minz, maxz)
     ax.set_zlim(maxy, miny)
@@ -215,8 +216,8 @@ def Plot(points, plane=[], colors=['b'], axis_d=[Axis.Y], title="Point Cloud"):
             Y, Z = np.meshgrid(y, z)
             X = (d - n[2]*Z - n[1]*Y) / n[0]
 
-        ax.plot_surface(X, Z, Y, color=colors[i], alpha=0.3)
-
+        ax.plot_surface(X, Z, Y, color=colors[i], alpha=0.7)
+    ax.legend()
     plt.show()
 
 
@@ -224,7 +225,7 @@ def Plot(points, plane=[], colors=['b'], axis_d=[Axis.Y], title="Point Cloud"):
 # Main program -----------------------------------------------------------------
 if __name__ == "__main__":
 
-    display = False
+    display = True
 
     # Q4.A
     print(f"\n----------------------------------------------------------------")
@@ -273,10 +274,11 @@ if __name__ == "__main__":
     print(f"Question 4(e) - cluttered_hallway.txt")
     cluttered_hallway = np.loadtxt(
         "../data/cluttered_hallway.txt", dtype=np.float)
-    sort_dirs = [SortDirection.X_ASC, SortDirection.X_DES,
-                 SortDirection.Y_ASC, SortDirection.Y_DES]
+    sort_dirs = [SortDirection.Y_ASC, SortDirection.Y_DES,
+                 SortDirection.X_ASC, SortDirection.X_DES]
     colors = ['b', 'g', 'm', 'c']
-    axis_dir = [Axis.X, Axis.X, Axis.Y, Axis.Y]
+    axis_dir = [Axis.Y, Axis.Y, Axis.X, Axis.X]
     planes = MultiPlaneClutter(cluttered_hallway, sort_dirs, n_segments=4)
-    Plot(cluttered_hallway, plane=planes, colors=colors, axis_d=axis_dir,
-         title="Cluttered Hallway Point Cloud")
+    if display:
+        Plot(cluttered_hallway, plane=planes, colors=colors, axis_d=axis_dir,
+            title="Cluttered Hallway Point Cloud")
