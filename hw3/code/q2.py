@@ -6,6 +6,7 @@
 
 #
 # Includes ---------------------------------------------------------------------
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from enum import Enum
@@ -13,6 +14,7 @@ from scipy import linalg
 
 #
 # Helper methods ---------------------------------------------------------------
+
 
 def Plot(x, y, x2, y2, title='Data fitting plot'):
     fig = plt.figure()
@@ -28,33 +30,29 @@ def Plot(x, y, x2, y2, title='Data fitting plot'):
     plt.show()
 
 
-def CreateBasis(x, n_poly=1, n_fourier=1, n=1):
-    basis = np.zeros(shape=(x.shape[0], n_poly+n_fourier), dtype=np.float)
+def GeneratePoly(x, i):
+    if i == 0:
+        return x**i, f"1"
+    return x**i, f"x**{i}"
 
-    if n_poly >= 1:
-        basis[:, 0] = 1.0
 
-    # Add polynomial basis
-    for i in range(1, n_poly):
-        basis[:, i] = x**i
+def GenerateSin(x, n):
+    return np.sin(n*np.pi*x), f"sin({n}*pi*x)"
 
-    for i in range(n_poly, n_poly+n_fourier):
-        if i % 2 == 0:
-            basis[:, i] = np.cos(n*np.pi*x)
-        else:
-            basis[:, i] = np.sin(n*np.pi*x)
-        n += 1
 
-    return basis
+def GenerateCos(x, n):
+    return np.cons(n*np.pi*x), f"cos({n}*pi*x)"
+
 
 def Approximate(A, f):
-  c = Solve(A, f)
-  f_ = np.matmul(A, c.T)
-  return f_, c
+    c = Solve(A, f)
+    f_ = np.matmul(A, c.T)
+    return f_, c
 
 #
 # From Homework 1
 # ------------------------------------------------------------------------------
+
 
 def ComputeSVD(A):
     """
@@ -111,20 +109,54 @@ def Solve(A, b):
 #
 # Main program -----------------------------------------------------------------
 if __name__ == "__main__":
-
-    # Q1.B
-    y = np.loadtxt("../data/problem2.txt", dtype=np.float)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--npoly", default=2, type=int,
+                        help="Number of polynomial basis function")
+    parser.add_argument("--p", default=0, type=int, 
+                        help="Starting value of i in x**i")
+    parser.add_argument("--nsin", default=1, type=int,
+                        help="Number sin() basis functions")
+    parser.add_argument("--s", default=5, type=int, 
+                        help="Starting value of n in sin(n*pix)")
+    parser.add_argument("--ncos", default=0, type=int,
+                        help="Number cos() basis functions")
+    parser.add_argument("--c", default=5, type=int, 
+                        help="Starting value of n in cos(n*pix)")
+    args = parser.parse_args()
+    
     inc = 0.01
+    y = np.loadtxt("../data/problem2.txt", dtype=np.float)
     x = np.arange(start=0, stop=1+inc, step=inc)
 
-    # 1, x, x**2, cos(pix), sin(pix)
-    # 3 poly 8 fourier
-    # basis = CreateBasis(x, 3, 8)
+    # Create matrix A with basis function
+    m = args.npoly + args.nsin + args.ncos
+    A = np.zeros((x.shape[0], m), dtype=np.float)
     
-    # 3 poly 4 fourier cos1 sin2 cos3 sin4
-    # A = CreateBasis(x, 3, 4)
-    A = CreateBasis(x, 3, 4)
+    f_str = ""
+    # Add Polynomials
+    p = args.p
+    for i in range(args.npoly):
+        A[:, i], s_ = GeneratePoly(x, p)
+        f_str += s_ + " + "
+        p += 1
+        
+    # Generate Sin
+    s = args.s
+    for i in range(args.nsin):
+        A[:, i+args.npoly], s_ = GenerateSin(x, s)
+        f_str += s_ + " + "
+        s += 1
+        
+    # Generate Cos
+    c = args.c 
+    for i in range(args.ncos):
+        A[:, i+args.npoly+args.nsin], s_ = GenerateCos(x, c)
+        f_str += s_ + " + "
+        c += 1
+    
     y_, c = Approximate(A, y)
+    print(f"--------------------------------------------")
     print(f"Coefficients: {c}")
-    Plot(x, y, x, y_)
-    
+    title = f"Recontstruction f(x) = {f_str}"
+    print(title)
+    Plot(x, y, x, y_, title)
