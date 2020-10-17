@@ -76,7 +76,7 @@ def CosPi(x, eps=0.0000001):
 
 def ComputeX(n):
   """ xi from question 1 (c) and (d) """
-  return np.asarray([(i * 2 / n) - 1 for i in range(n)])
+  return np.asarray([(i * 2 / n) - 1 for i in range(n+1)])
 
 def ComputeF(x):
   """ f(x) from question 1 (c) and (d) """
