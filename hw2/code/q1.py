@@ -105,8 +105,8 @@ def Test(X, Y, x_test, y_truth = None, display_all=True):
     err = np.abs(y_truth - y_interp)
     
   if display_all:
-    print(f"Interpolate at x:\n{x}")
-    print(f"Interpolation result y_interp:\n{y_interp}")
+    print(f"x:\n{x}")
+    print(f"y_interp:\n{y_interp}")
     print(f"y_truth:\n{y_truth}\nerror: {err}")
   
   return err, y_interp
@@ -154,9 +154,9 @@ if __name__ == "__main__":
   y_truth = ComputeF(x)
   N = [2, 4, 40]
   for n in N: 
-    print(f"\n*** With n: {n}")
     X = ComputeX(n)
     Y = ComputeF(X)
+    print(f"\n*** With polynomial of order n={n} and nodes={len(X)}")
     Test(X, Y, x, y_truth)
   
   # Q1.D 
@@ -164,18 +164,19 @@ if __name__ == "__main__":
   print(f"Question 1 (d) - Estimating max error of f(x) = 2 / (1 + 9x^2)")
   N = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 40]
   En = np.zeros((len(N), 1), dtype=np.float32)
-  delta = 0.01
+  delta = 0.001
   x = np.arange(-1, 1, delta)
   for i, n in enumerate(N):
-    print(f"\n*** With n: {n}")
     X = ComputeX(n)
     Y = ComputeF(X)
-    X_ = X.copy()
-    Y_ = Y.copy()
-    x_test_ = x.copy()
     # y_truth
-    fx = ComputeF(x)
-    err, y_interp = Test(X, Y, x, fx, display_all=False)
+    y = ComputeF(x)
+    print(f"\n*** With polynomial of order n={n} and nodes={len(X)}")
+    err, y_interp = Test(X, Y, x, y, display_all=False)
+    # Plot
+    # X_ = X.copy()
+    # Y_ = Y.copy()
+    # x_test_ = x.copy()
     # Plot(X_, Y_, x_test_, y_interp, n)
     En[i] = err[np.argmax(err)]
-    print(f"*** Max error: {En[i]}")
+    print(f"*** Max error={En[i]}")

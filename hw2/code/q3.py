@@ -71,22 +71,50 @@ def FindRoot(f, df, low_val, high_val):
     if x_root != None:
       print(f"Using x_guess: {x_guess}, found x_root: {x_root}")
       return x_root
+
+def Plot(X, Y, roots, minx=5, maxx=25):
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  ax.set_title(f'f(x) = x - tan(x)')
+  ax.set_xlabel('x')
+  ax.set_ylabel('y')
+  ax.set_ylim(-10, 40)
+  ax.set_xlim(minx, maxx)
+  plt.axhline(0, color='black')
   
+  plt.scatter(roots[:, 0], roots[:, 1], color='b', label='roots')
+  plt.vlines(roots[:, 0], 0, roots[:, 1], linestyle="dashed")
+  for r in roots:
+      ax.annotate(f"{np.round(r, 4)}", xy=(r[0]+.2, r[1]-2), fontsize=10)
+  
+  plt.plot(X, Y, color='r', label='f(x)')
+  
+  plt.legend(loc='upper left')
+  plt.show()  
   
 #
 # Main program -----------------------------------------------------------------
 if __name__ == "__main__":
   # Regions of convergence to start Newton's
+  roots = []
   x_low_guess_range = [13.5, 14.5]
   x_high_guess_range = [16.5, 17.5]
   
   x_low = FindRoot(f, df, x_low_guess_range[0], x_low_guess_range[1])
+  roots.append([x_low, f(x_low)])
+  
   x_high = FindRoot(f, df, x_high_guess_range[0], x_high_guess_range[1])
+  roots.append([x_high, f(x_high)])
   
   if x_low == None:
     print(f"Could not find x_low, used range: {x_low_guess_range}")
   elif x_high == None:
     print(f"Could not find x_low, used range: {x_high_guess_range}")
-  
+
   print(f"Interval [x_low, x_high] is [{x_low}, {x_high}]")
-    
+  
+  xmin = 5
+  xmax = 25
+  X = np.arange(xmin, xmax, step=0.01)
+  Y = f(X)
+  Plot(X, Y, np.asarray(roots), minx=xmin, maxx=xmax)
