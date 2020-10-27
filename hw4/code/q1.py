@@ -113,7 +113,7 @@ if __name__ == "__main__":
     h = 0.05
     interval = [0.0, 1.0]
     print(f"\n----------------------------------------------------------------")
-    print("Question 1 (a) Exacty solution")
+    print("Question 1 (a) Exact y(x) solution")
     x = np.arange(start=interval[0], stop=interval[1]+h, step=h)
     n = len(x)
     y = Exacty(x)
