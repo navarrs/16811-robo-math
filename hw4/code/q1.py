@@ -104,6 +104,7 @@ def Plot(x, y1, y2, y3, y4, title = 'Analytical vs Numerical solutions'):
     plt.plot(x, y4, color='m', label='AB4')
     
     plt.legend(loc='lower right')
+    plt.savefig("../out/q1/ode-solutions.png")
     plt.show()
 
 #
