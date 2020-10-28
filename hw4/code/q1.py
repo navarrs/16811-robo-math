@@ -121,7 +121,7 @@ if __name__ == "__main__":
     print(f"\n----------------------------------------------------------------")
     print("Question 1 (b) Euler method")
     y_euler = EulersMethod(1, dy, n, -h)[::-1]
-    err_euler = y - y_euler
+    err_euler = abs(y - y_euler)
     
     Teuler = PrettyTable()
     Teuler.add_column('x', x)
@@ -134,7 +134,7 @@ if __name__ == "__main__":
     print(f"\n----------------------------------------------------------------")
     print("Question 1 (c) Runge-Kutta 4")
     y_rk4 = RungeKutta4(1, dy, n, -h)[::-1]
-    err_rk4 = y - y_rk4
+    err_rk4 = abs(y - y_rk4)
     
     Trk4 = PrettyTable()
     Trk4.add_column('x', x)
@@ -149,7 +149,7 @@ if __name__ == "__main__":
     y0, y1, y2, y3 = Exacty(1), Exacty(1.05), Exacty(1.10), Exacty(1.15)
     print(f"Starting with y0: {y0}, y1: {y1}, y2: {y2}, y3: {y3}")
     y_ab4 = AdamsBashforth4(y0, y1, y2, y3, dy, n, -h)[::-1]
-    err_ab4 = y - y_ab4
+    err_ab4 = abs(y - y_ab4)
     
     Tab4 = PrettyTable()
     Tab4.add_column('x', x)
