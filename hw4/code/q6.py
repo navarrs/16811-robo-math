@@ -19,13 +19,14 @@ N = 101
 waypoints = 300
 
 class Cost(Enum):
-    B = 0
-    C = 1
+    A = 0
+    B = 1
+    C = 2
 
 #
 # Problem implementation -------------------------------------------------------
 # Q6.A
-def Optimize6A(path0, obs_cost, t_step=0.1, u_optimum=0.01):
+def Optimize6A(path0, obs_cost, t_step=0.1, u_optimum=0.1):
 
     gx, gy = np.gradient(obs_cost)
 
@@ -59,11 +60,12 @@ def Optimize6A(path0, obs_cost, t_step=0.1, u_optimum=0.01):
     return path1, path1_values
 
 
-def Optimize(path0, obs_cost, cost = Cost.B, iters=100, t_step=0.1):
+def Optimize(path0, obs_cost, cost = Cost.A, iters=100, t_step=0.1):
 
     gx, gy = np.gradient(obs_cost)
 
     path1 = path0.copy()
+    
     # Do not optimize start / goal points
     for k in range(iters):
         for i in range(1, len(path1)-1):
@@ -74,6 +76,8 @@ def Optimize(path0, obs_cost, cost = Cost.B, iters=100, t_step=0.1):
             if x >= (N-1) or y >= (N-1):
                 break
             
+            if cost == Cost.A:
+                d = np.zeros(2)
             if cost == Cost.B:
                 d = (path1[i] - path1[i-1])
             elif cost == Cost.C:
@@ -81,6 +85,7 @@ def Optimize(path0, obs_cost, cost = Cost.B, iters=100, t_step=0.1):
                 
             grad_x = 0.8 * gx[x, y] + 4 * d[0]
             grad_y = 0.8 * gy[x, y] + 4 * d[1]
+            
             # print(f"path point ({path[i, 0]}, {path[i, 1]})")
             # print(f"gradients ({grad_x}, {grad_y})")
             path1[i, 0] = path1[i, 0] - t_step * grad_x
@@ -137,8 +142,8 @@ def Plot(obs_cost, path0, path0_values, path1, path1_values,
          name='path'):
     # Plot 2D
     plt.imshow(obs_cost.T)
-    plt.plot(path0[:, 0], path0[:, 1], 'ro', lw=1)
-    plt.plot(path1[:, 0], path1[:, 1], 'go', lw=1)
+    plt.plot(path0[:, 0], path0[:, 1], 'ro', lw=0.5)
+    plt.plot(path1[:, 0], path1[:, 1], 'go', lw=0.5)
     plt.savefig(f"../out/q6/plot2d_{name}.png")
 
     # Plot 3D
@@ -166,27 +171,31 @@ if __name__ == "__main__":
 
     print(f"\n----------------------------------------------------------------")
     print("Question 6 (a) Optimize path")
-    path1, path1_values = Optimize(path0, obs_cost)
+    path1, path1_values = Optimize(path0, obs_cost, Cost.A, 1, t_step=0.8)
     Plot(obs_cost, path0, path0_values, path1, path1_values, name='path-a')
+    
+    path1, path1_values = Optimize6A(path0, obs_cost)
+    # path1, path1_values = Optimize(path0, obs_cost, Cost.A, 5000, t_step=0.1)
+    Plot(obs_cost, path0, path0_values, path1, path1_values, name='path-a_opt')
 
-    print(f"\n----------------------------------------------------------------")
-    print("Question 6 (b) Optimize path with additional cost iters = 100")
-    path1, path1_values = Optimize(path0, obs_cost, Cost.B, 100)
-    Plot(obs_cost, path0, path0_values, path1, path1_values, name='path-b_100')
+    # print(f"\n----------------------------------------------------------------")
+    # print("Question 6 (b) Optimize path with additional cost iters = 100")
+    # path1, path1_values = Optimize(path0, obs_cost, Cost.B, 100)
+    # Plot(obs_cost, path0, path0_values, path1, path1_values, name='path-b_100')
     
-    print("Question 6 (b) Optimize path with additional cost iters = 100")
-    path1, path1_values = Optimize(path0, obs_cost, Cost.B, 200)
-    Plot(obs_cost, path0, path0_values, path1, path1_values, name='path-b_200')
+    # print("Question 6 (b) Optimize path with additional cost iters = 100")
+    # path1, path1_values = Optimize(path0, obs_cost, Cost.B, 200)
+    # Plot(obs_cost, path0, path0_values, path1, path1_values, name='path-b_200')
     
-    print("Question 6 (b) Optimize path with additional cost iters = 500")
-    path1, path1_values = Optimize(path0, obs_cost, Cost.B, 500)
-    Plot(obs_cost, path0, path0_values, path1, path1_values, name='path-b_500')
+    # print("Question 6 (b) Optimize path with additional cost iters = 500")
+    # path1, path1_values = Optimize(path0, obs_cost, Cost.B, 500)
+    # Plot(obs_cost, path0, path0_values, path1, path1_values, name='path-b_500')
 
-    print(f"\n----------------------------------------------------------------")
-    print("Question 6 (b) Optimize path with additional cost iters = 100")
-    path1, path1_values = Optimize(path0, obs_cost, Cost.C, 100)
-    Plot(obs_cost, path0, path0_values, path1, path1_values, name='path-c_100')
+    # print(f"\n----------------------------------------------------------------")
+    # print("Question 6 (c) Optimize path with additional cost iters = 100")
+    # path1, path1_values = Optimize(path0, obs_cost, Cost.C, 100)
+    # Plot(obs_cost, path0, path0_values, path1, path1_values, name='path-c_100')
     
-    print("Question 6 (b) Optimize path with additional cost iters = 5000")
-    path1, path1_values = Optimize(path0, obs_cost, Cost.C, 5000)
-    Plot(obs_cost, path0, path0_values, path1, path1_values, name='path-c_5000')
+    # print("Question 6 (c) Optimize path with additional cost iters = 5000")
+    # path1, path1_values = Optimize(path0, obs_cost, Cost.C, 5000)
+    # Plot(obs_cost, path0, path0_values, path1, path1_values, name='path-c_5000')

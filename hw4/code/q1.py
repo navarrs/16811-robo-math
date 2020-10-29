@@ -9,7 +9,16 @@
 # Includes ---------------------------------------------------------------------
 import matplotlib.pyplot as plt
 import numpy as np
-from prettytable import PrettyTable
+import os 
+
+OUTDIR = "../out/q1"
+if not os.path.exists(OUTDIR):
+    os.makedirs(OUTDIR)
+
+print_tables = True
+
+if print_tables:
+    from prettytable import PrettyTable
 
 #
 # Problem implementation -------------------------------------------------------
@@ -71,19 +80,19 @@ def RungeKutta4(y0, f, n, h=0.05):
 def AdamsBashforth4(yn, yn_1, yn_2, yn_3, f, n, h=0.05):
     """ Adams-Bashforth Method of order 4 to solve numerical differential 
         equations. """
-    def Step(y):
+    def Step():
         step = 55 * f(yn) - 59 * f(yn_1) + 37 * f(yn_2) - 9 * f(yn_3)
-        return y + h * step /24
+        return yn + h * step /24
     
     y_ab4 = [yn_3, yn_2, yn_1, yn]
     for i in range(n-1):
-        y_ab4.append(Step(y_ab4[i+3]))
-        yn = y_ab4[i+3]
-        yn_1 = y_ab4[i+2]
-        yn_2 = y_ab4[i+1]
-        yn_3 = y_ab4[i]
+        y_ab4.append(Step())
+        yn = y_ab4[i+4]
+        yn_1 = y_ab4[i+3]
+        yn_2 = y_ab4[i+2]
+        yn_3 = y_ab4[i+1]
     
-    return np.asarray(y_ab4)[3:]
+    return np.asarray(y_ab4)[3:][::-1]
 
 #
 # Helper Methods ---------------------------------------------------------------
@@ -104,7 +113,7 @@ def Plot(x, y1, y2, y3, y4, title = 'Analytical vs Numerical solutions'):
     plt.plot(x, y4, color='m', label='AB4')
     
     plt.legend(loc='lower right')
-    plt.savefig("../out/q1/ode-solutions.png")
+    plt.savefig(os.path.join(OUTDIR, "ode-solutions.png"))
     plt.show()
 
 #
@@ -124,41 +133,82 @@ if __name__ == "__main__":
     y_euler = EulersMethod(1, dy, n, -h)[::-1]
     err_euler = abs(y - y_euler)
     
-    Teuler = PrettyTable()
-    Teuler.add_column('x', x)
-    Teuler.add_column('y_Exacty', y)
-    Teuler.add_column('y_euler', y_euler)
-    Teuler.add_column('error', err_euler)
-    Teuler.float_format = ".10"
-    print(Teuler)
+    if print_tables:
+        Teuler = PrettyTable()
+        Teuler.add_column('x', x)
+        Teuler.add_column('y_Exacty', y)
+        Teuler.add_column('y_euler', y_euler)
+        Teuler.add_column('error', err_euler)
+        Teuler.float_format = ".10"
+        print(Teuler)
         
+    table = np.zeros((len(x), 4))
+    table[:, 0] = x
+    table[:, 1] = y
+    table[:, 2] = y_euler
+    table[:, 3] = err_euler
+    np.savetxt(os.path.join(OUTDIR, 'table_euler.csv'), 
+               table, fmt='%10.5f', delimiter=',')
+    
     print(f"\n----------------------------------------------------------------")
     print("Question 1 (c) Runge-Kutta 4")
     y_rk4 = RungeKutta4(1, dy, n, -h)[::-1]
     err_rk4 = abs(y - y_rk4)
     
-    Trk4 = PrettyTable()
-    Trk4.add_column('x', x)
-    Trk4.add_column('y_Exacty', y)
-    Trk4.add_column('y_rk4', y_rk4)
-    Trk4.add_column('error', err_rk4)
-    Trk4.float_format = ".10"
-    print(Trk4)
+    if print_tables:
+        Trk4 = PrettyTable()
+        Trk4.add_column('x', x)
+        Trk4.add_column('y_Exacty', y)
+        Trk4.add_column('y_rk4', y_rk4)
+        Trk4.add_column('error', err_rk4)
+        Trk4.float_format = ".10"
+        print(Trk4)
+        
+    table[:, 0] = x
+    table[:, 1] = y
+    table[:, 2] = y_rk4
+    table[:, 3] = err_rk4
+    np.savetxt(os.path.join(OUTDIR, 'table_rk4.csv'), 
+               table, fmt='%10.5f', delimiter=',')
+
     
     print(f"\n----------------------------------------------------------------")
     print("Question 1 (d) Adams-Bashforth 4")
     y0, y1, y2, y3 = Exacty(1), Exacty(1.05), Exacty(1.10), Exacty(1.15)
     print(f"Starting with y0: {y0}, y1: {y1}, y2: {y2}, y3: {y3}")
-    y_ab4 = AdamsBashforth4(y0, y1, y2, y3, dy, n, -h)[::-1]
+    y_ab4 = AdamsBashforth4(y0, y1, y2, y3, dy, n, -h)
     err_ab4 = abs(y - y_ab4)
     
-    Tab4 = PrettyTable()
-    Tab4.add_column('x', x)
-    Tab4.add_column('y_Exacty', y)
-    Tab4.add_column('y_ab4', y_ab4)
-    Tab4.add_column('error', err_ab4)
-    Tab4.float_format = ".10"
-    print(Tab4)
+    if print_tables:
+        Tab4 = PrettyTable()
+        Tab4.add_column('x', x)
+        Tab4.add_column('y_Exacty', y)
+        Tab4.add_column('y_ab4', y_ab4)
+        Tab4.add_column('error', err_ab4)
+        Tab4.float_format = ".10"
+        print(Tab4)
+    
+    table[:, 0] = x
+    table[:, 1] = y
+    table[:, 2] = y_ab4
+    table[:, 3] = err_ab4
+    np.savetxt(os.path.join(OUTDIR, 'table_ab4.csv'), 
+               table, fmt='%10.5f', delimiter=',')
+ 
     
     title = "Analytical vs Numerical solutions to y(x)"
+    
+    # Full table
+    table = np.zeros((len(x), 8))
+    table[:, 0] = x
+    table[:, 1] = y
+    table[:, 2] = y_euler
+    table[:, 3] = err_euler
+    table[:, 4] = y_rk4
+    table[:, 5] = err_rk4
+    table[:, 6] = y_ab4
+    table[:, 7] = err_ab4
+    np.savetxt(os.path.join(OUTDIR, 'full_table.csv'), 
+               table, fmt='%10.5f', delimiter=',')
+    
     Plot(x, y, y_euler, y_rk4, y_ab4, title)
