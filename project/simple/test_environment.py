@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# @brief Tests the environment
+# @brief Tests the environment creation
 # @author navarrs
 # ------------------------------------------------------------------------------
 
@@ -24,7 +24,7 @@ import torch.optim as optim
 #
 # MY INCLUDES
 # ------------------------------------------------------------------------------
-from grid_world import gameEnv
+from environment import Environment
 from model import DQN
 from common import ExperienceReplay, SETTINGS, Transition
 
@@ -32,26 +32,26 @@ from common import ExperienceReplay, SETTINGS, Transition
 #
 # GLOBAL PARAMETERS
 # ------------------------------------------------------------------------------
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-DEVICE = "cpu"
-print(f"Using device: {DEVICE}")
-print(f"Settings:\n{SETTINGS}")
+ENV_SETTINGS = {
+    "grid_size": (5, 5),
+    "world_size": (84, 84),
+    "object_config": {
+        "obstacles": 3, "goals": 1, "agents": 1
+    }
+}
 
+CFG_SETTINGS = {
+    "num_steps": 100,
+}
 
-n_actions = len(SETTINGS["actions"])
-n_episodes = SETTINGS["num_episodes"]
-max_episode_len = SETTINGS["max_episode_length"]
-dims = SETTINGS["world_dims"]
-eps = SETTINGS["eps"]
+env = Environment(ENV_SETTINGS)
 
-policy_net = DQN(dims[0], dims[1], dims[2], n_actions).to(DEVICE)
-target_net = DQN(dims[0], dims[1], dims[2], n_actions).to(DEVICE)
-target_net.load_state_dict(policy_net.state_dict())
-target_net.eval()
+grid = env.get_grid()
+print(grid)
 
-optimizer = optim.RMSprop(policy_net.parameters())
-memory = ExperienceReplay(100)
-
-total_steps = 0
-
-env = gameEnv(partial=False, size=SETTINGS["world_size"])
+for i in range(CFG_SETTINGS["num_steps"]):
+    action = np.random.randint(low=0, high=env.get_nactions())
+    state, reward, done = env.step(action)
+    print(f"Action: {env.get_action_name(action)} Reward: {reward} Done: {done}")
+    
+env.save()

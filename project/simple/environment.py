@@ -1,133 +1,255 @@
+# ------------------------------------------------------------------------------
+# @brief RL environment
+# @author navarrs
+# ------------------------------------------------------------------------------
+
+#
+# INCLUDES
+# ------------------------------------------------------------------------------
 import numpy as np
+import copy
 import random
 import itertools
 import scipy.misc
 import matplotlib.pyplot as plt
 from PIL import Image
 from skimage.transform import resize
+from enum import Enum
 
-class gameOb():
-    def __init__(self,coordinates,size,intensity,channel,reward,name):
-        self.x = coordinates[0]
-        self.y = coordinates[1]
-        self.size = size
-        self.intensity = intensity
-        self.channel = channel
+#
+# Classes
+# ------------------------------------------------------------------------------
+
+
+class ObjectType(Enum):
+    OBSTACLE = 1
+    GOAL = 2
+    AGENT = 3
+
+
+class Coordinate(object):
+    X = 0.0
+    Y = 0.0
+
+
+class Object():
+    def __init__(self, obj_type, position, reward=None):
+        f"""
+        Initializes an object that will be used in the environment.
+        Args
+        ----
+            obj_type: type of object in the environment [OBSTACLE, GOAL, AGENT]
+            position: position where the object is in the environent
+            reward:   reward assigned to the object
+        """
+        self.obj_type = obj_type
+        self.position = position
         self.reward = reward
-        self.name = name
-        
-        
-class gameEnv():
-    def __init__(self,partial,size):
-        self.order = 0
-        self.sizeX = size
-        self.sizeY = size
-        self.actions = 4
+
+    #
+    # MEMBER SETTERS
+    # --------------------------------------------------------------------------
+    def set_position(self, position):
+        self.position = position
+    
+    #
+    # MEMBER GETTERS
+    # --------------------------------------------------------------------------
+    def get_position(self):
+        return self.position
+    
+    def get_reward(self):
+        return self.reward
+
+    def get_obj_type(self):
+        return self.obj_type
+
+
+class Environment():
+    def __init__(self, settings):
+        f"""
+        Initializes the environment.
+        Args
+        ----
+            settings:   Configuration file containing the settings to create the
+                        environment:
+                            - grid_size:  number of cells that the world contains
+                            - world_size: dimensions used to resize the grid
+                            - object_config: number of goals, obstacles and agents 
+        """
+        self.world_size = settings["world_size"]
+        self.grid_size = settings["grid_size"]
+        self.grid = np.zeros(self.grid_size, dtype=np.int)
+        self.actions = ["up", "down", "left", "right"]
+        self.object_config = settings["object_config"]
+        self.n_actions = len(self.actions)
         self.objects = []
-        self.partial = partial
-        a = self.reset()
-        
-        
+        self.agent = None
+        self.states = []
+        self.reset()
+
     def reset(self):
-        self.objects = []
-        hero = gameOb(self.newPosition(),1,1,2,None,'hero')
-        self.objects.append(hero)
-        bug = gameOb(self.newPosition(),1,1,1,1,'goal')
-        self.objects.append(bug)
-        hole = gameOb(self.newPosition(),1,1,0,-1,'fire')
-        self.objects.append(hole)
-        bug2 = gameOb(self.newPosition(),1,1,1,1,'goal')
-        self.objects.append(bug2)
-        hole2 = gameOb(self.newPosition(),1,1,0,-1,'fire')
-        self.objects.append(hole2)
-        bug3 = gameOb(self.newPosition(),1,1,1,1,'goal')
-        self.objects.append(bug3)
-        bug4 = gameOb(self.newPosition(),1,1,1,1,'goal')
-        self.objects.append(bug4)
-        state = self.renderEnv()
-        self.state = state
+        f"""
+        Create and spawn objects in the world.
+        Out
+        ---
+            state: initial state of the episode.
+        """
+        self.states = []
+        for o in range(self.object_config["obstacles"]):
+            obj = self.spawn(obj_type=ObjectType.OBSTACLE, reward=-1)
+            self.objects.append(obj)
+
+        for g in range(self.object_config["goals"]):
+            obj = self.spawn(obj_type=ObjectType.GOAL, reward=1)
+            self.objects.append(obj)
+
+        self.agent = self.spawn(ObjectType.AGENT)
+
+        state = self.render()
+        self.states.append(state)
         plt.imshow(state, interpolation="nearest")
         plt.savefig(f"out/reset_state.png")
-        # plt.show()
-        return np.float32(state)
+        return state
 
-    def moveChar(self,direction):
-        # 0 - up, 1 - down, 2 - left, 3 - right
-        hero = self.objects[0]
-        heroX = hero.x
-        heroY = hero.y
-        penalize = 0.
-        if direction == 0 and hero.y >= 1:
-            hero.y -= 1
-        if direction == 1 and hero.y <= self.sizeY-2:
-            hero.y += 1
-        if direction == 2 and hero.x >= 1:
-            hero.x -= 1
-        if direction == 3 and hero.x <= self.sizeX-2:
-            hero.x += 1     
-        if hero.x == heroX and hero.y == heroY:
-            penalize = 0.0
-        self.objects[0] = hero
-        return penalize
-    
-    def newPosition(self):
-        iterables = [ range(self.sizeX), range(self.sizeY)]
-        points = []
-        for t in itertools.product(*iterables):
-            points.append(t)
-        currentPositions = []
-        for objectA in self.objects:
-            if (objectA.x,objectA.y) not in currentPositions:
-                currentPositions.append((objectA.x,objectA.y))
-        for pos in currentPositions:
-            points.remove(pos)
-        location = np.random.choice(range(len(points)),replace=False)
-        return points[location]
+    def spawn(self, obj_type, reward=None):
+        f"""
+        Spawn an object at a random and free location on the grid.
+        Args
+        ----
+            obj_type:   type of object (ObjectType) to spawn
+            reward:     reward value assigned to this object
+        Out
+        ---
+            obj: the spawned object
+        """
+        free = np.argwhere(self.grid == 0)
+        obj_location = free[np.random.choice(range(len(free)), size=1)][0]
+        self.grid[obj_location[0], obj_location[1]] = obj_type.value
+        obj = Object(obj_type, obj_location, size, reward)
+        # print(obj.get_position(), obj.get_reward())
+        return obj
 
-    def checkGoal(self):
-        others = []
+    def render(self):
+        f"""
+        Renders a state.
+        Out
+        ---
+            state: new state of the episode.
+        """
+        state = np.zeros(
+            (self.grid_size[0], self.grid_size[1], 3), dtype=np.float32)
+
         for obj in self.objects:
-            if obj.name == 'hero':
-                hero = obj
-            else:
-                others.append(obj)
-        ended = False
-        for other in others:
-            if hero.x == other.x and hero.y == other.y:
-                self.objects.remove(other)
-                if other.reward == 1:
-                    self.objects.append(gameOb(self.newPosition(),1,1,1,1,'goal'))
-                else: 
-                    self.objects.append(gameOb(self.newPosition(),1,1,0,-1,'fire'))
-                return other.reward,False
-        if ended == False:
-            return 0.0,False
+            pos = obj.get_position()
+            val = obj.get_obj_type().value-1
+            state[pos[0], pos[1], val] = 1
 
-    def renderEnv(self):
-        #a = np.zeros([self.sizeY,self.sizeX,3])
-        a = np.ones([self.sizeY+2,self.sizeX+2,3])
-        a[1:-1,1:-1,:] = 0
-        hero = None
-        for item in self.objects:
-            a[item.y+1:item.y+item.size+1,item.x+1:item.x+item.size+1,item.channel] = item.intensity
-            if item.name == 'hero':
-                hero = item
-        if self.partial == True:
-            a = a[hero.y:hero.y+3,hero.x:hero.x+3,:]
-        b = resize(a[:,:,0], (84, 84), order=self.order)
-        c = resize(a[:,:,1], (84, 84), order=self.order)
-        d = resize(a[:,:,2], (84, 84), order=self.order)
-        a = np.stack([b,c,d],axis=2)
-        return a
+        pos = self.agent.get_position()
+        val = self.agent.get_obj_type().value-1
+        state[pos[0], pos[1], val] = 1
 
-    def step(self,action):
-        penalty = self.moveChar(action)
-        reward,done = self.checkGoal()
-        state = self.renderEnv()
-        if reward == None:
-            print(done)
-            print(reward)
-            print(penalty)
-            return state,(reward+penalty),done
-        else:
-            return state,(reward+penalty),done
+        state = resize(
+            state, (self.world_size[0], self.world_size[1]), order=0)
+        return state
+
+    def step(self, action):
+        f"""
+        Performs a step for the agent and a state update. 
+        Args
+        ----
+            action: action that the agent takes: [up, down, left, right]
+        Out
+        ---
+            state: new state of the episode.
+            reward: obtained reward (or penalty) from this step
+            done: True if the agent reached the goal
+        """
+        reward, done = self.move(action)
+        state = self.render()
+        self.states.append(state)
+        return state, reward, done
+
+    def move(self, action):
+        f"""
+        Moves the agent based on the input action.
+        Args
+        ----
+            action: action that the agent takes: [up, down, left, right]
+        Out
+        ---
+            reward: obtained reward (or penalty) from this movement
+            done: True if the agent reached the goal
+        """
+        reward = 0
+        done = False
+        action_val = self.actions[action]
+
+        agent_position = self.agent.get_position()
+        new_agent_position = agent_position.copy()
+
+        if action_val == "up":
+            if agent_position[0] == 0:
+                return -0.001, False
+            new_agent_position[0] -= 1
+
+        elif action_val == "down":
+            if agent_position[0] == self.grid_size[0]-1:
+                return -0.001, False
+            new_agent_position[0] += 1
+
+        elif action_val == "left":
+            if agent_position[1] == 0:
+                return -0.001, False
+            new_agent_position[1] -= 1
+
+        elif action_val == "right":
+            if agent_position[1] == self.grid_size[1]-1:
+                return -0.001, False
+            new_agent_position[1] += 1
+
+        # print(f"\nCurrent agent's location: {agent_position} new {new_agent_position}")
+        for obj in self.objects:
+            if (
+                obj.get_position()[0] == new_agent_position[0] and
+                obj.get_position()[1] == new_agent_position[1]
+            ):
+                reward += obj.get_reward()
+
+                if ObjectType.GOAL == obj.get_obj_type():
+                    done = True
+
+        self.agent.set_position(new_agent_position)
+        return reward, done
+
+    def save(self, outfile="out/game.avi", FPS=12):
+        f"""
+        Renders states into a video.
+        Args
+        ----
+            FPS: frames per second used to write the video
+            outfile: filename to save this video.
+        """
+        import cv2
+        out = cv2.VideoWriter(outfile, cv2.VideoWriter_fourcc(*'DIVX'),
+                              FPS, self.world_size)
+        for s in self.states:
+            s = (255*s).astype(np.uint8)
+            s = cv2.cvtColor(s, cv2.COLOR_BGR2RGB)
+            out.write(s)
+        out.release()
+
+    #
+    # MEMBER GETTERS
+    # --------------------------------------------------------------------------
+    def get_grid(self):
+        return self.grid
+
+    def get_nactions(self):
+        return self.n_actions
+
+    def get_action_name(self, action):
+        return self.actions[action]
+
+    def get_states(self):
+        return self.states
