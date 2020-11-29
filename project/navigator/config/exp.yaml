@@ -1,0 +1,139 @@
+# ------------------------------------------------------------------------------
+# NOTE:
+# This experiment is based on habitat-test-scenes provided with habitat AI code. 
+# It's a dummy configuration file to test any changes I make.
+# ------------------------------------------------------------------------------
+
+# ------------------------------------------------------------------------------
+# GENERAL EXPERIMENT CONFIG 
+# ------------------------------------------------------------------------------
+BASE_TASK_CONFIG_PATH: config/task.yaml
+SIMULATOR_GPU_ID: 0
+TORCH_GPU_ID: 0
+NUM_PROCESSES: 2
+CMD_TRAILING_OPTS: []
+# Checkpoint and logging stuff
+TENSORBOARD_DIR: out/nav/tensorboard_dirs/dummy
+EVAL_CKPT_PATH_DIR: out/nav/checkpoints/dummy
+CHECKPOINT_FOLDER: out/nav/checkpoints/dummy
+LOAD_CKPT_PATH: out/nav/checkpoints/dummy/ckpt.0.pth
+LOAD_FROM_CKPT: False
+CHECKPOINT_INTERVAL: 10
+LOG_INTERVAL: 5
+LOG_FILE: "train.log"
+# Video stuff
+VIDEO_DIR: out/nav/videos/dummy
+VIDEO_OPTION: ["disk"]  # options: "disk", "tensorboard"
+# ------------------------------------------------------------------------------
+# TRAINING DETAILS
+# ------------------------------------------------------------------------------
+NUM_UPDATES: 100
+TRAINER_NAME: "navigator" #"dagger"
+ENV_NAME:  "NavigatorRLEnv" #"VLNCEDaggerEnv"
+SENSORS: ["RGB_SENSOR", "DEPTH_SENSOR"]
+# ------------------------------------------------------------------------------
+# EVALUATION DETAILS
+# ------------------------------------------------------------------------------
+EVAL:
+  USE_CKPT_CONFIG: False
+  SPLIT: val #val_seen
+  EPISODE_COUNT: 1
+# ------------------------------------------------------------------------------
+# TASK DETAILS
+# ------------------------------------------------------------------------------
+TASK:
+  TYPE: NavigatorTask-v0
+  SUCCESS_DISTANCE: 2.0
+  SENSORS: [
+    "POINTGOAL_WITH_GPS_COMPASS_SENSOR",
+  ]
+  POINTGOAL_SENSOR:
+    GOAL_FORMAT: POLAR
+    DIMENSIONALITY: 2
+  GOAL_SENSOR_UUID: "pointgoal_with_gps_compass"
+  POSSIBLE_ACTIONS: [
+    STOP, 
+    MOVE_FORWARD, 
+    TURN_LEFT, 
+    TURN_RIGHT
+  ]
+  MEASUREMENTS: [
+    DISTANCE_TO_GOAL, 
+    # COLLISION_DISTANCE,
+    # COLLISION_COUNT,
+    # PATH_LENGTH,
+    # STEPS_TAKEN
+  ]
+  SUCCESS:
+    SUCCESS_DISTANCE: 2.0
+  SPL:
+    SUCCESS_DISTANCE: 2.0
+  PATH_LENGTH:
+    TYPE: "PathLength"
+  STEPS_TAKEN:
+    TYPE: "StepsTaken"
+  COLLISION_DISTANCE:
+    TYPE: "CollisionDistance"
+  COLLISION_COUNT:
+    TYPE: "CollisionCount"
+# ------------------------------------------------------------------------------
+# DATASET DETAILS
+# ------------------------------------------------------------------------------
+DATASET:
+  TYPE: PointNav-v1
+  SPLIT: train
+  DATA_PATH: data/habitat-test-scenes/v1/{split}/{split}.json.gz
+  SCENES_DIR: data/scene_datasets/
+# ------------------------------------------------------------------------------
+# MODEL DETAILS
+# ------------------------------------------------------------------------------
+MODEL:
+  POLICY: "seq2seq"
+  RGB_ENCODER:
+    cnn_type: "RGBEncoderResnet50"
+    output_size: 256
+    supported_encoders: ["RGBEncoderResnet50"]
+  DEPTH_ENCODER:
+    cnn_type: "DepthEncoderResnet50"
+    output_size: 128
+    backbone: "resnet50"
+    ddppo_checkpoint: "data/ddppo-models/gibson-2plus-resnet50.pth"
+    supported_encoders: ["DepthEncoderResnet50"]
+  STATE_ENCODER:
+    hidden_size: 512
+    rnn_type: "GRU"
+  SEQ2SEQ:
+    use_pointgoal: True 
+    use_heading: False
+    use_prev_action: False
+# ------------------------------------------------------------------------------
+# RL DETAILS
+# ------------------------------------------------------------------------------
+RL:
+  REWARD_MEASURE: "distance_to_goal"
+  SUCCESS_MEASURE: "distance_to_goal"
+  COLLISION_MEASURE: "collision_distance"
+  COLLISION_CHECK: False
+  COLLISION_THRESH: 0.5
+  COLLISION_REWARD: -1.0
+  SUCCESS_REWARD: 10.0
+  SLACK_REWARD: -0.01
+  PPO: 
+    clip_param: 0.1
+    ppo_epoch: 4
+    # This was 4 in the paper
+    num_mini_batch: 2
+    value_loss_coef: 0.5
+    entropy_coef: 0.01
+    lr: 2.5e-4
+    eps: 1e-5
+    max_grad_norm: 0.5
+    num_steps: 128
+    hidden_size: 512
+    use_gae: True
+    gamma: 0.99
+    tau: 0.95
+    use_linear_clip_decay: True
+    use_linear_lr_decay: True
+    reward_window_size: 50
+    use_normalized_advantage: False

@@ -1,120 +1,172 @@
+# ------------------------------------------------------------------------------
+# @brief Simple RL agent
+# @author navarrs
+# ------------------------------------------------------------------------------
 
+#
+# INCLUDES
+# ------------------------------------------------------------------------------
 from __future__ import division
 
 import gym
 import numpy as np
 import random
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import scipy.misc
 import os
-from collections import namedtuple
+import math
 
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+
+#
+# MY INCLUDES
+# ------------------------------------------------------------------------------
 from grid_world import gameEnv
-env = gameEnv(partial=False, size=5)
+from model import DQN
+from common import ExperienceReplay, SETTINGS, Transition
 
-ACTIONS = ["up", "down", "right", "left"]
-WORLD_DIMS = [84, 84, 3]
-FLATTENED_DIMS =  WORLD_DIMS[0] * WORLD_DIMS[1] * WORLD_DIMS[2]
-NUM_EPISODES = 1
-MAX_EPISODE_LENGTH = 10
-PRETRAIN_STEPS = 5
-total_steps = 0
-annealing_steps = 2
-e, starte, ende = 1, 1, 0.1
-drop_e = (starte-ende) / annealing_steps
-update_freq = 5
 
-Transition = namedtuple('Transition', 
-                        ('state', 'action', 'next_state', 'reward'))
+#
+# GLOBAL PARAMETERS
+# ------------------------------------------------------------------------------
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = "cpu"
+print(f"Using device: {DEVICE}")
+print(f"Settings:\n{SETTINGS}")
 
-class ExperienceReplay(object):
-    def __init__(self, capacity):
-        self.capacity = capacity
-        self.memory = []
-        self.position= 0
-    
-    def push(self, *args):
-        if len(self.memory) < self.capacity:
-            self.memory.append(None)
-        self.memory[self.position] = Transition(*args)
-        self.position = (self.position + 1) % self.capacity
-    
-    def sample(self, batch_size):
-        return random.sample(self.memory, batch_size)
 
-class DQN(nn.Module):
-    def __init__(self, height, width, channels, actions):
-        super(DQN, self).__init__()
-        
-        self.conv1 = nn.Conv2d(3, 16, kernel_size=5, stride=2)
-        self.bn1 = nn.BatchNorm2d(16)
-        
-        self.conv2 = nn.Conv2d(16, 32, kernel_size=5, stride=2)
-        self.bn2 = nn.BatchNorm2d(32)
-        
-        self.conv3 = nn.Conv2d(32, 32, kernel_size=5, stride=2)
-        self.bn3 = nn.BatchNorm2d(32)
-        
-        def conv2d_size_out(size, ksize=5, stride=2):
-            return (size - (ksize-1) -1) // stride + 1
-        
-        convw = conv2d_size_out(conv2d_size_out(conv2d_size_out(width)))
-        convh = conv2d_size_out(conv2d_size_out(conv2d_size_out(height)))
-        linear_input_size = convw * convh * 32
-        self.head = nn.Linear(linear_input_size, actions)
-        
-    def forward(self, x):
-        x = self.bn1(self.conv1(x))
-        x = F.relu(x)
-        x = self.bn2(self.conv2(x))
-        x = F.relu(x)
-        x = self.bn3(self.conv3(x))
-        x = F.relu(x)
-        return self.head(x.view(x.size(0), -1))
-        
-def process_state(state):
-    return np.reshape(state, FLATTENED_DIMS)
+n_actions = len(SETTINGS["actions"])
+n_episodes = SETTINGS["num_episodes"]
+max_episode_len = SETTINGS["max_episode_length"]
+dims = SETTINGS["world_dims"]
+eps = SETTINGS["eps"]
 
-policy_net = DQN(WORLD_DIMS[0], WORLD_DIMS[1], WORLD_DIMS[2], len(ACTIONS))
-target_net = DQN(WORLD_DIMS[0], WORLD_DIMS[1], WORLD_DIMS[2], len(ACTIONS))
+policy_net = DQN(dims[0], dims[1], dims[2], n_actions).to(DEVICE)
+target_net = DQN(dims[0], dims[1], dims[2], n_actions).to(DEVICE)
 target_net.load_state_dict(policy_net.state_dict())
 target_net.eval()
 
-for episode in range(NUM_EPISODES):
-    print("Episode: {}/{}".format(episode, NUM_EPISODES))
-    state = torch.from_numpy(env.reset()).permute(2, 1, 0)
-    # # state = process_state(state)
-    state = state.unsqueeze(0)
-    done = False
-    reward_all = 0
-    for i in range(MAX_EPISODE_LENGTH):
-       
-        # Compute action
-        if np.random.rand(1) < e or total_steps < PRETRAIN_STEPS:
-            action_num = np.random.randint(low=0, high=len(ACTIONS))
-        else:
-            action_prob = net(state)
-            _, action_num = torch.max(action_prob, 1)
-        action_name = ACTIONS[action_num]
-        
-        # Compute step
-        new_state, reward, done = env.step(action_num)
-        total_steps += 1
-        
-        if total_steps > PRETRAIN_STEPS:
-            if e > ende:
-                e -= drop_e
-            
-            if total_steps % update_freq == 0:
-                pass
-        
-        plt.imshow(new_state, interpolation="nearest")
-        plt.savefig(f"out/state_{i+1}.png")
-        
-        
-        print("Step: {}/{} Action: {}".format(i, MAX_EPISODE_LENGTH, action_name))
+optimizer = optim.RMSprop(policy_net.parameters())
+memory = ExperienceReplay(100)
+
+total_steps = 0
+
+env = gameEnv(partial=False, size=SETTINGS["world_size"])
+
+#
+# Methods
+# ------------------------------------------------------------------------------
+
+
+def select_action(state, eps, n_actions):
+    f"""
+    Chooses an action either randomly or from the policy.
+    """
+    global total_steps
+    eps_thresh = eps["end"] + (eps["start"] - eps["end"]) * \
+        math.exp(-1. * total_steps / eps["decay"])
+    total_steps += 1
+    if random.random() > eps_thresh:
+        # print(f"From net")
+        with torch.no_grad():
+            action = policy_net(state).max(1)[1].view(1, 1)  
+    else:
+        # print(f"Sample")
+        action = torch.tensor([[random.randrange(n_actions)]], 
+                              device=DEVICE, dtype=torch.long)
+    return action
+
+
+def optimize(settings):
+    batch_size = settings["batch_size"]
+    gamma = settings["gamma"]
+
+    if len(memory) < batch_size:
+        return
+
+    transitions = memory.sample(batch_size)    
+    batch = Transition(*zip(*transitions))
     
+    non_final_mask = torch.tensor(
+        tuple(map(lambda s: s is not None, batch.next_state)), device=DEVICE,
+        dtype=torch.bool
+    )
+    non_final_next_states = torch.cat(
+        [s for s in batch.next_state if s is not None])
+    
+    state_batch = torch.cat(batch.state)
+    action_batch = torch.cat(batch.action)
+    reward_batch = torch.cat(batch.reward)
+    # print(state_batch.size(), action_batch.size(), reward_batch.size())
+
+    state_action_values = policy_net(state_batch).gather(1, action_batch)
+    next_state_values = torch.zeros(batch_size, device=DEVICE)
+    next_state_values[non_final_mask] = target_net(
+        non_final_next_states.float()).max(1)[0].detach()
+    expected_state_action_values = (next_state_values * gamma) + reward_batch
+    # print(f"state-action values:\n{state_action_values}")
+    # print(f"expected state-action values:\n{expected_state_action_values}")
+
+    loss = F.smooth_l1_loss(state_action_values,
+                            expected_state_action_values.unsqueeze(1))
+
+    optimizer.zero_grad()
+    loss.backward()
+    for param in policy_net.parameters():
+        param.grad.data.clamp_(-1, 1)
+    optimizer.step()
+
+
+def process_state(state, dim):
+    # return np.reshape(state, dim)
+    state = torch.from_numpy(state).permute(2, 1, 0)
+    return state.unsqueeze(0)
+
+#
+# Main
+# ------------------------------------------------------------------------------
+
+
+for episode in range(n_episodes):
+    print("Episode: {}/{}".format(episode, n_episodes))
+    state = env.reset()
+    state = process_state(state, dims)
+    reward_all = 0.0
+    for i in range(max_episode_len):
+        action = select_action(state, eps, n_actions)
+        action_name = SETTINGS["actions"][action]
+        new_state, reward, done = env.step(action)
+        reward_all += reward
+        reward = torch.tensor([reward], device=DEVICE, dtype=torch.float32)
         
+        if done:
+            next_state = None
+        else:
+            new_state = process_state(new_state, dims)
+
+        memory.push(state, action, new_state, reward)
+
+        optimize(SETTINGS)
+
+        if done:
+            print(f"Episode Done")
+            break
+        
+        if i % SETTINGS["log_interval"] == 0:
+            print("Step: {}/{} Action: {} Reward: {}"
+                .format(i+1, max_episode_len, action_name, reward_all))
+    
+    if episode % SETTINGS["target_update"] == 0:
+        target_net.load_state_dict(policy_net.state_dict())
+
+print(f"Training Complete!")
+
+
+#         plt.imshow(new_state, interpolation="nearest")
+#         plt.savefig(f"out/state_{i+1}.png")
+
+
+#         print("Step: {}/{} Action: {}".format(i, MAX_EPISODE_LENGTH, action_name))

@@ -13,6 +13,11 @@ import numpy as np
 from scipy.ndimage.morphology import distance_transform_edt
 from enum import Enum
 
+
+OUTDIR = "../out/q6"
+if not os.path.exists(OUTDIR):
+    os.makedirs(OUTDIR)
+
 #
 # Global parameters ------------------------------------------------------------
 N = 101
