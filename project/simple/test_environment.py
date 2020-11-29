@@ -33,10 +33,12 @@ from common import ExperienceReplay, SETTINGS, Transition
 # GLOBAL PARAMETERS
 # ------------------------------------------------------------------------------
 ENV_SETTINGS = {
-    "grid_size": (5, 5),
-    "world_size": (84, 84),
+    "grid_size": (10, 10),
+    "world_size": (100, 100),
     "object_config": {
-        "obstacles": 3, "goals": 1, "agents": 1
+        "non_traversable_obstacles": 5, 
+        "traversable_obstacles": 5,
+        "goals": 1, "prizes": 0,  "agents": 1
     }
 }
 
